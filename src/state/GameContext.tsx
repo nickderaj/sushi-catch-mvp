@@ -9,9 +9,24 @@ import React, {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LOCATIONS } from '../data/gameData';
-import { randomFish, randomName, randomRole, rollRarity, rollStats } from '../utils/rng';
+import {
+  randomFish,
+  randomName,
+  randomRole,
+  randomSpeciesId,
+  rollRarity,
+  rollStats
+} from '../utils/rng';
 import { clamp, now } from '../utils/time';
-import type { Character, FishItem, PlayerState, Trip, TripRewards } from './gameTypes';
+import type {
+  Character,
+  FishItem,
+  KitchenRewards,
+  KitchenShift,
+  PlayerState,
+  Trip,
+  TripRewards
+} from './gameTypes';
 
 const STORAGE_KEY = 'sushi-catch-mvp-state';
 
@@ -26,6 +41,7 @@ const defaultState: PlayerState = {
   ownedCharacters: [],
   fishInventory: [],
   trips: [],
+  kitchenShifts: [],
   restaurant: {
     level: 1,
     coinsPerMin: 5,
@@ -61,12 +77,14 @@ const mergeFish = (inventory: FishItem[], adds: FishItem[]) => {
 };
 
 const rollCharacter = (): Character => {
+  const speciesId = randomSpeciesId();
   return {
     id: createId(),
     name: randomName(),
     rarity: rollRarity(),
     role: randomRole(),
-    stats: rollStats(),
+    speciesId,
+    stats: rollStats(speciesId),
     createdAt: now()
   };
 };
@@ -128,6 +146,78 @@ const resolveTripRewards = (crew: Character[], locationId: string): TripRewards 
   };
 };
 
+const calculateFishValue = (rarity: FishItem['rarity']) => {
+  switch (rarity) {
+    case '5':
+      return 30;
+    case '4':
+      return 20;
+    case '3':
+      return 14;
+    case '2':
+      return 10;
+    default:
+      return 6;
+  }
+};
+
+const resolveKitchenRewards = (staff: Character[], durationSec: number, inventory: FishItem[]) => {
+  if (staff.length === 0) {
+    return {
+      rewards: { coins: 0, served: 0, bonus: 0, details: 'No staff assigned.' },
+      nextInventory: inventory
+    };
+  }
+
+  const totalFish = inventory.reduce((sum, item) => sum + item.count, 0);
+  if (totalFish === 0) {
+    return {
+      rewards: { coins: 0, served: 0, bonus: 0, details: 'No fish to serve.' },
+      nextInventory: inventory
+    };
+  }
+
+  const hours = durationSec / 3600;
+  const baseServe = Math.max(1, Math.floor(hours * 3));
+  const serveCount = Math.min(baseServe, totalFish);
+
+  const staffSkill = staff.reduce(
+    (sum, char) => sum + char.stats.expertise + char.stats.charisma,
+    0
+  );
+  const bonus = Math.round(staffSkill / 20);
+
+  const inventoryMap = new Map(inventory.map((item) => [item.id, { ...item }]));
+  let coins = 0;
+  let served = 0;
+
+  const fishPool = inventoryMap.values().reduce<FishItem[]>((acc, item) => {
+    for (let i = 0; i < item.count; i += 1) acc.push(item);
+    return acc;
+  }, []);
+
+  for (let i = 0; i < serveCount; i += 1) {
+    const fish = fishPool[Math.floor(Math.random() * fishPool.length)];
+    if (!fish) break;
+    const entry = inventoryMap.get(fish.id);
+    if (!entry || entry.count <= 0) continue;
+    entry.count -= 1;
+    coins += calculateFishValue(entry.rarity);
+    served += 1;
+  }
+
+  const nextInventory = Array.from(inventoryMap.values()).filter((item) => item.count > 0);
+  return {
+    rewards: {
+      coins: coins + bonus,
+      served,
+      bonus,
+      details: served === 0 ? 'No fish served.' : `Served ${served} fish.`
+    },
+    nextInventory
+  };
+};
+
 const GameContext = createContext<{
   state: PlayerState;
   loading: boolean;
@@ -135,13 +225,17 @@ const GameContext = createContext<{
   completeIntro: () => void;
   buyEggs: (count: number) => void;
   startTrip: (crewIds: string[], locationId: string, durationSec: number) => void;
-  claimTrip: (tripId: string) => void;
+  claimTrip: (tripId: string) => TripRewards | null;
+  startKitchenShift: (staffIds: string[], durationSec: number) => void;
+  claimKitchenShift: (shiftId: string) => KitchenRewards | null;
   collectIdle: () => void;
-  tapServe: () => void;
+  tapServe: (fishIds: string[]) => { coins: number; served: number };
+  autoServe: () => { coins: number; served: number };
   upgradeRestaurant: (type: 'throughput' | 'rate') => void;
   resetGame: () => void;
   addCurrency: (coins: number, pearls: number, eggs: number) => void;
   skipTrips: () => void;
+  skipKitchen: () => void;
   addFish: (count: number) => void;
 }>({
   state: defaultState,
@@ -150,13 +244,17 @@ const GameContext = createContext<{
   completeIntro: () => {},
   buyEggs: () => {},
   startTrip: () => {},
-  claimTrip: () => {},
+  claimTrip: () => null,
+  startKitchenShift: () => {},
+  claimKitchenShift: () => null,
   collectIdle: () => {},
-  tapServe: () => {},
+  tapServe: () => ({ coins: 0, served: 0 }),
+  autoServe: () => ({ coins: 0, served: 0 }),
   upgradeRestaurant: () => {},
   resetGame: () => {},
   addCurrency: () => {},
   skipTrips: () => {},
+  skipKitchen: () => {},
   addFish: () => {}
 });
 
@@ -181,8 +279,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (raw) {
           const parsed = JSON.parse(raw) as PlayerState;
           const idleCoins = calculateIdleCoins(parsed);
+          const migratedCharacters = parsed.ownedCharacters.map((char) => {
+            if (!char.speciesId) {
+              const speciesId = randomSpeciesId();
+              return { ...char, speciesId, stats: rollStats(speciesId) };
+            }
+            return char;
+          });
           const next: PlayerState = {
             ...parsed,
+            ownedCharacters: migratedCharacters,
+            kitchenShifts: parsed.kitchenShifts ?? [],
             coins: parsed.coins + idleCoins,
             lastActiveAt: now()
           };
@@ -258,6 +365,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const claimTrip = useCallback((tripId: string) => {
+    let resolvedRewards: TripRewards | null = null;
     setState((prev) => {
       const trip = prev.trips.find((t) => t.id === tripId);
       if (!trip) return prev;
@@ -265,6 +373,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (trip.endsAt > now()) return prev;
       const crew = prev.ownedCharacters.filter((c) => trip.crewIds.includes(c.id));
       const rewards = resolveTripRewards(crew, trip.locationId);
+      resolvedRewards = rewards;
       const nextTrips = prev.trips.map((t) =>
         t.id === tripId ? { ...t, resolved: true, rewards } : t
       );
@@ -275,6 +384,58 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         trips: nextTrips
       };
     });
+    return resolvedRewards;
+  }, []);
+
+  const startKitchenShift = useCallback(
+    (staffIds: string[], durationSec: number) => {
+      if (staffIds.length === 0) return;
+      const hasActive = state.kitchenShifts.some(
+        (shift) => !shift.resolved && shift.endsAt > now()
+      );
+      if (hasActive) return;
+      const startedAt = now();
+      const shift: KitchenShift = {
+        id: createId(),
+        staffIds,
+        durationSec,
+        startedAt,
+        endsAt: startedAt + durationSec * 1000,
+        resolved: false
+      };
+      setState((prev) => ({
+        ...prev,
+        kitchenShifts: [shift, ...prev.kitchenShifts]
+      }));
+    },
+    [state.kitchenShifts]
+  );
+
+  const claimKitchenShift = useCallback((shiftId: string) => {
+    let resolvedRewards: KitchenRewards | null = null;
+    setState((prev) => {
+      const shift = prev.kitchenShifts.find((s) => s.id === shiftId);
+      if (!shift) return prev;
+      if (shift.resolved) return prev;
+      if (shift.endsAt > now()) return prev;
+      const staff = prev.ownedCharacters.filter((c) => shift.staffIds.includes(c.id));
+      const { rewards, nextInventory } = resolveKitchenRewards(
+        staff,
+        shift.durationSec,
+        prev.fishInventory
+      );
+      resolvedRewards = rewards;
+      const nextShifts = prev.kitchenShifts.map((s) =>
+        s.id === shiftId ? { ...s, resolved: true, rewards } : s
+      );
+      return {
+        ...prev,
+        coins: prev.coins + rewards.coins,
+        fishInventory: nextInventory,
+        kitchenShifts: nextShifts
+      };
+    });
+    return resolvedRewards;
   }, []);
 
   const collectIdle = useCallback(() => {
@@ -288,8 +449,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, []);
 
-  const tapServe = useCallback(() => {
+  const tapServe = useCallback((fishIds: string[]) => {
+    let result = { coins: 0, served: 0 };
     setState((prev) => {
+      if (fishIds.length === 0) return prev;
       const current = now();
       const delta = current - lastTapRef.current;
       if (delta < 2000) {
@@ -298,13 +461,32 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         comboRef.current = 1;
       }
       lastTapRef.current = current;
+      const inventoryMap = new Map(prev.fishInventory.map((f) => [f.id, { ...f }]));
+      const available = fishIds
+        .map((id) => inventoryMap.get(id))
+        .filter((fish): fish is FishItem => !!fish && fish.count > 0);
+      if (available.length === 0) return prev;
+      const chosen = available[Math.floor(Math.random() * available.length)];
+      chosen.count -= 1;
+      const baseCoins = calculateFishValue(chosen.rarity);
+      const served = 1;
+      const nextInventory = Array.from(inventoryMap.values()).filter((f) => f.count > 0);
       const tip = prev.restaurant.tipsPerTap * comboRef.current;
+      const totalCoins = baseCoins + tip;
+      result = { coins: totalCoins, served };
       return {
         ...prev,
-        coins: prev.coins + tip
+        coins: prev.coins + totalCoins,
+        fishInventory: nextInventory
       };
     });
+    return result;
   }, []);
+
+  const autoServe = useCallback(() => {
+    const available = state.fishInventory.filter((f) => f.count > 0).map((f) => f.id);
+    return tapServe(available);
+  }, [state.fishInventory, tapServe]);
 
   const upgradeRestaurant = useCallback((type: 'throughput' | 'rate') => {
     setState((prev) => {
@@ -355,6 +537,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   }, []);
 
+  const skipKitchen = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      kitchenShifts: prev.kitchenShifts.map((shift) => ({
+        ...shift,
+        endsAt: Math.min(shift.endsAt, now() - 1000)
+      }))
+    }));
+  }, []);
+
   const addFish = useCallback((count: number) => {
     const additions: FishItem[] = Array.from({ length: count }).map(() => {
       const fishName = randomFish();
@@ -380,12 +572,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       buyEggs,
       startTrip,
       claimTrip,
+      startKitchenShift,
+      claimKitchenShift,
       collectIdle,
       tapServe,
+      autoServe,
       upgradeRestaurant,
       resetGame,
       addCurrency,
       skipTrips,
+      skipKitchen,
       addFish
     }),
     [
@@ -396,12 +592,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       buyEggs,
       startTrip,
       claimTrip,
+      startKitchenShift,
+      claimKitchenShift,
       collectIdle,
       tapServe,
+      autoServe,
       upgradeRestaurant,
       resetGame,
       addCurrency,
       skipTrips,
+      skipKitchen,
       addFish
     ]
   );

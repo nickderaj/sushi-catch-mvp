@@ -1,17 +1,20 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { LOCATIONS, DURATIONS } from '../data/gameData';
+import { DURATIONS, LOCATIONS } from '../data/gameData';
 import { useGame } from '../state/GameContext';
 import { formatSeconds, now } from '../utils/time';
 import { playReward } from '../utils/sfx';
+import type { TripRewards } from '../state/gameTypes';
 
 export const FishScreen: React.FC = () => {
   const { state, startTrip, claimTrip } = useGame();
   const [selectedCrew, setSelectedCrew] = useState<string[]>([]);
   const [locationId, setLocationId] = useState(LOCATIONS[0].id);
   const [durationSec, setDurationSec] = useState(DURATIONS[0].seconds);
+  const [rewardModal, setRewardModal] = useState(false);
+  const [lastRewards, setLastRewards] = useState<TripRewards | null>(null);
   const [, setTick] = useState(0);
   const hasActiveTrips = useMemo(() => {
     const nowMs = now();
@@ -37,6 +40,16 @@ export const FishScreen: React.FC = () => {
   const activeTrips = useMemo(() => {
     return state.trips.slice(0, 5);
   }, [state.trips]);
+
+  const handleClaim = (tripId: string) => {
+    const rewards = claimTrip(tripId);
+    if (rewards) {
+      setLastRewards(rewards);
+      setRewardModal(true);
+      playReward().catch(() => undefined);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+    }
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -111,13 +124,7 @@ export const FishScreen: React.FC = () => {
                 <PrimaryButton
                   label={ready ? 'Claim Rewards' : 'In Progress'}
                   onPress={() => {
-                    claimTrip(trip.id);
-                    if (ready) {
-                      playReward().catch(() => undefined);
-                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
-                        () => undefined
-                      );
-                    }
+                    if (ready) handleClaim(trip.id);
                   }}
                   disabled={!ready}
                 />
@@ -126,6 +133,30 @@ export const FishScreen: React.FC = () => {
           );
         })
       )}
+
+      <Modal visible={rewardModal} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Trip Rewards</Text>
+            <Text style={styles.modalMeta}>{lastRewards?.outcomeLabel}</Text>
+            <Text style={styles.modalMeta}>Coins: +{lastRewards?.coins ?? 0}</Text>
+            <Text style={styles.modalMeta}>XP: +{lastRewards?.xp ?? 0}</Text>
+            <Text style={styles.modalMeta}>Mats: +{lastRewards?.mats ?? 0}</Text>
+            <Text style={styles.modalMeta}>Treasure: {lastRewards?.treasure ? 'Yes' : 'No'}</Text>
+            <Text style={styles.sectionTitle}>Fish</Text>
+            {lastRewards && lastRewards.fish.length > 0 ? (
+              lastRewards.fish.map((fish, index) => (
+                <Text key={`${fish.id}-${index}`} style={styles.modalMeta}>
+                  {fish.name} • {fish.rarity}★
+                </Text>
+              ))
+            ) : (
+              <Text style={styles.modalMeta}>No fish caught.</Text>
+            )}
+            <PrimaryButton label="Close" onPress={() => setRewardModal(false)} />
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -178,5 +209,25 @@ const styles = StyleSheet.create({
   cardMeta: {
     color: '#7A5A44',
     marginBottom: 6
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    padding: 24
+  },
+  modalCard: {
+    backgroundColor: '#FFF1E2',
+    borderRadius: 16,
+    padding: 16
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 6
+  },
+  modalMeta: {
+    color: '#7A5A44',
+    marginBottom: 4
   }
 });

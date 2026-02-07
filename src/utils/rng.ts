@@ -1,4 +1,12 @@
-import { RARITY_RATES, Rarity, ROLES, CHARACTER_NAMES, FISH_TYPES } from '../data/gameData';
+import {
+  RARITY_RATES,
+  Rarity,
+  ROLES,
+  CHARACTER_NAMES,
+  FISH_TYPES,
+  SPECIES,
+  SpeciesId
+} from '../data/gameData';
 
 export type StatBlock = {
   power: number;
@@ -22,18 +30,26 @@ export const rollRarity = (): Rarity => {
   return '1';
 };
 
-export const rollStats = (): StatBlock => {
-  // Baseline 50 with +/- 8% variance
-  const base = 50;
+export const randomSpeciesId = (): SpeciesId => {
+  return SPECIES[Math.floor(Math.random() * SPECIES.length)].id;
+};
+
+export const rollStats = (speciesId: SpeciesId): StatBlock => {
+  const species = SPECIES.find((entry) => entry.id === speciesId) ?? SPECIES[0];
   const variance = rand(-8, 8) / 100;
-  const roll = (bias = 0) => Math.round(base * (1 + variance) + rand(-6, 6) + bias);
+  const base = species.baselineStats;
+  const biasFishing = species.fishingBias;
+  const biasKitchen = species.kitchenBias;
+
+  const applyVariance = (value: number) => Math.round(value * (1 + variance) + rand(-4, 4));
+
   return {
-    power: roll(),
-    dexterity: roll(),
-    speed: roll(),
-    luck: roll(),
-    expertise: roll(),
-    charisma: roll()
+    power: applyVariance(base.power + biasFishing * 2),
+    dexterity: applyVariance(base.dexterity + biasFishing * 2),
+    speed: applyVariance(base.speed + biasFishing),
+    luck: applyVariance(base.luck + biasFishing),
+    expertise: applyVariance(base.expertise + biasKitchen * 2),
+    charisma: applyVariance(base.charisma + biasKitchen * 2)
   };
 };
 

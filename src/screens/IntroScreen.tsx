@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { StatBlockView } from '../components/StatBlock';
+import { SPECIES } from '../data/gameData';
 import { useGame } from '../state/GameContext';
 import type { Character } from '../state/gameTypes';
 import type { RootStackParamList } from '../types/navigation';
@@ -41,6 +42,7 @@ export const IntroScreen: React.FC<NativeStackScreenProps<RootStackParamList, 'I
         <View style={styles.card}>
           <Text style={styles.name}>{character?.name}</Text>
           <Text style={styles.meta}>
+            {SPECIES.find((entry) => entry.id === character?.speciesId)?.name ?? 'Unknown'} •{' '}
             {character?.role} • {character?.rarity}★
           </Text>
           {character?.stats ? <StatBlockView stats={character.stats} /> : null}

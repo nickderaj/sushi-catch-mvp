@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { StatBlockView } from '../components/StatBlock';
-import { RARITY_LABEL } from '../data/gameData';
+import { RARITY_LABEL, SPECIES } from '../data/gameData';
 import { useGame } from '../state/GameContext';
 import type { Character } from '../state/gameTypes';
 import { playEggCrack, playReward } from '../utils/sfx';
@@ -60,9 +59,12 @@ export const HatchScreen: React.FC = () => {
           <View key={char.id} style={styles.card}>
             <Text style={styles.name}>{char.name}</Text>
             <Text style={styles.meta}>
+              {SPECIES.find((entry) => entry.id === char.speciesId)?.name ?? 'Unknown'} •{' '}
               {char.role} • {RARITY_LABEL[char.rarity]} ({char.rarity}★)
             </Text>
-            <StatBlockView stats={char.stats} />
+            <Text style={styles.meta}>
+              Base: {char.stats.power} PWR • {char.stats.expertise} EXP
+            </Text>
           </View>
         ))
       )}

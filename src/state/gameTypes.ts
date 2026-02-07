@@ -1,4 +1,4 @@
-import type { Rarity, Role } from '../data/gameData';
+import type { Rarity, Role, SpeciesId } from '../data/gameData';
 import type { StatBlock } from '../utils/rng';
 
 export type Character = {
@@ -6,6 +6,7 @@ export type Character = {
   name: string;
   rarity: Rarity;
   role: Role;
+  speciesId: SpeciesId;
   stats: StatBlock;
   createdAt: number;
 };
@@ -38,6 +39,23 @@ export type TripRewards = {
   outcomeLabel: string;
 };
 
+export type KitchenShift = {
+  id: string;
+  staffIds: string[];
+  durationSec: number;
+  startedAt: number;
+  endsAt: number;
+  resolved: boolean;
+  rewards?: KitchenRewards;
+};
+
+export type KitchenRewards = {
+  coins: number;
+  served: number;
+  bonus: number;
+  details: string;
+};
+
 export type RestaurantState = {
   level: number;
   coinsPerMin: number;
@@ -55,6 +73,7 @@ export type PlayerState = {
   ownedCharacters: Character[];
   fishInventory: FishItem[];
   trips: Trip[];
+  kitchenShifts: KitchenShift[];
   restaurant: RestaurantState;
   lastActiveAt: number;
 };

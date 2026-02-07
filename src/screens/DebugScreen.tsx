@@ -4,7 +4,7 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { useGame } from '../state/GameContext';
 
 export const DebugScreen: React.FC = () => {
-  const { state, addCurrency, addFish, skipTrips, resetGame } = useGame();
+  const { state, addCurrency, addFish, skipTrips, skipKitchen, resetGame } = useGame();
 
   return (
     <View style={styles.container}>
@@ -24,6 +24,7 @@ export const DebugScreen: React.FC = () => {
       <View style={styles.section}>
         <PrimaryButton label="Add 5 Random Fish" onPress={() => addFish(5)} />
         <PrimaryButton label="Skip All Trip Timers" onPress={skipTrips} />
+        <PrimaryButton label="Skip Kitchen Shift Timers" onPress={skipKitchen} />
       </View>
 
       <View style={styles.section}>
