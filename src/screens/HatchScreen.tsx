@@ -1,18 +1,26 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { StatBlockView } from '../components/StatBlock';
 import { RARITY_LABEL } from '../data/gameData';
 import { useGame } from '../state/GameContext';
 import type { Character } from '../state/gameTypes';
+import { playEggCrack, playReward } from '../utils/sfx';
 
 export const HatchScreen: React.FC = () => {
   const { state, hatchEggs, buyEggs } = useGame();
   const [lastPulls, setLastPulls] = useState<Character[]>([]);
 
-  const handleHatch = (count: number) => {
+  const handleHatch = async (count: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    playEggCrack().catch(() => undefined);
     const pulls = hatchEggs(count);
     setLastPulls(pulls);
+    if (pulls.length > 0) {
+      playReward().catch(() => undefined);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+    }
   };
 
   return (

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useGame } from '../state/GameContext';
+import { playReward } from '../utils/sfx';
 
 export const RestaurantScreen: React.FC = () => {
   const { state, collectIdle, tapServe, upgradeRestaurant } = useGame();
@@ -25,12 +27,25 @@ export const RestaurantScreen: React.FC = () => {
       <Text style={styles.title}>Restaurant</Text>
       <Text style={styles.balance}>Coins: {state.coins}</Text>
       <Text style={styles.sub}>Idle: {state.restaurant.coinsPerMin} coins/min (cap 8h)</Text>
-      <PrimaryButton label="Collect Idle Earnings" onPress={collectIdle} />
+      <PrimaryButton
+        label="Collect Idle Earnings"
+        onPress={() => {
+          collectIdle();
+          playReward().catch(() => undefined);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+        }}
+      />
 
       <View style={styles.tapCard}>
         <Text style={styles.sectionTitle}>Serve Customers</Text>
         <Text style={styles.sub}>Tap for tips • Combo up to {state.restaurant.comboMax}x</Text>
-        <PrimaryButton label={`Tap to Serve (x${localCombo})`} onPress={handleTap} />
+        <PrimaryButton
+          label={`Tap to Serve (x${localCombo})`}
+          onPress={() => {
+            handleTap();
+            Haptics.selectionAsync().catch(() => undefined);
+          }}
+        />
       </View>
 
       <View style={styles.upgradeCard}>

@@ -1,9 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { LOCATIONS, DURATIONS } from '../data/gameData';
 import { useGame } from '../state/GameContext';
 import { formatSeconds, now } from '../utils/time';
+import { playReward } from '../utils/sfx';
 
 export const FishScreen: React.FC = () => {
   const { state, startTrip, claimTrip } = useGame();
@@ -91,7 +93,17 @@ export const FishScreen: React.FC = () => {
               {trip.resolved && trip.rewards ? (
                 <Text style={styles.cardMeta}>Claimed: {trip.rewards.outcomeLabel} (+{trip.rewards.coins} coins)</Text>
               ) : (
-                <PrimaryButton label={ready ? 'Claim Rewards' : 'In Progress'} onPress={() => claimTrip(trip.id)} disabled={!ready} />
+                <PrimaryButton
+                  label={ready ? 'Claim Rewards' : 'In Progress'}
+                  onPress={() => {
+                    claimTrip(trip.id);
+                    if (ready) {
+                      playReward().catch(() => undefined);
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+                    }
+                  }}
+                  disabled={!ready}
+                />
               )}
             </View>
           );
