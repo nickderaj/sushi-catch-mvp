@@ -13,11 +13,16 @@ export const FishScreen: React.FC = () => {
   const [locationId, setLocationId] = useState(LOCATIONS[0].id);
   const [durationSec, setDurationSec] = useState(DURATIONS[0].seconds);
   const [, setTick] = useState(0);
+  const hasActiveTrips = useMemo(() => {
+    const nowMs = now();
+    return state.trips.some((trip) => !trip.resolved && trip.endsAt > nowMs);
+  }, [state.trips]);
 
   useEffect(() => {
+    if (!hasActiveTrips) return;
     const id = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [hasActiveTrips]);
 
   const toggleCrew = (id: string) => {
     setSelectedCrew((prev) => {
