@@ -14,8 +14,6 @@
     "ios": {
       "supportsTablet": false
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ]
+    "assetBundlePatterns": ["**/*"]
   }
 }

@@ -10,7 +10,7 @@ import type { RootStackParamList } from '../types/navigation';
 import { playEggCrack } from '../utils/sfx';
 
 export const IntroScreen: React.FC<NativeStackScreenProps<RootStackParamList, 'Intro'>> = ({
-  navigation,
+  navigation
 }) => {
   const { hatchEggs, completeIntro } = useGame();
   const [hatched, setHatched] = useState(false);
@@ -57,13 +57,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FDF7F0',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    padding: 24
   },
   title: {
     fontSize: 22,
     fontWeight: '700',
     marginBottom: 16,
-    color: '#3A2416',
+    color: '#3A2416'
   },
   egg: {
     width: 140,
@@ -72,21 +72,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFE9D2',
     borderWidth: 3,
     borderColor: '#F3C5A1',
-    marginBottom: 24,
+    marginBottom: 24
   },
   card: {
     width: '100%',
     backgroundColor: '#FFF1E2',
     borderRadius: 16,
-    padding: 16,
+    padding: 16
   },
   name: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#2E1B11',
+    color: '#2E1B11'
   },
   meta: {
     marginBottom: 8,
-    color: '#7A5A44',
-  },
+    color: '#7A5A44'
+  }
 });

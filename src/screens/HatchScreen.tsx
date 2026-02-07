@@ -31,10 +31,26 @@ export const HatchScreen: React.FC = () => {
         <Text style={styles.currency}>Pearls: {state.pearls}</Text>
         <Text style={styles.currency}>Coins: {state.coins}</Text>
       </View>
-      <PrimaryButton label="Hatch 1 (1 egg)" onPress={() => handleHatch(1)} disabled={state.eggs < 1} />
-      <PrimaryButton label="Hatch 10 (10 eggs)" onPress={() => handleHatch(10)} disabled={state.eggs < 10} />
-      <PrimaryButton label="Buy 1 Egg (10 pearls)" onPress={() => buyEggs(1)} disabled={state.pearls < 10} />
-      <PrimaryButton label="Buy 10 Eggs (100 pearls)" onPress={() => buyEggs(10)} disabled={state.pearls < 100} />
+      <PrimaryButton
+        label="Hatch 1 (1 egg)"
+        onPress={() => handleHatch(1)}
+        disabled={state.eggs < 1}
+      />
+      <PrimaryButton
+        label="Hatch 10 (10 eggs)"
+        onPress={() => handleHatch(10)}
+        disabled={state.eggs < 10}
+      />
+      <PrimaryButton
+        label="Buy 1 Egg (10 pearls)"
+        onPress={() => buyEggs(1)}
+        disabled={state.pearls < 10}
+      />
+      <PrimaryButton
+        label="Buy 10 Eggs (100 pearls)"
+        onPress={() => buyEggs(10)}
+        disabled={state.pearls < 100}
+      />
 
       <Text style={styles.sectionTitle}>Last Pulls</Text>
       {lastPulls.length === 0 ? (
@@ -43,7 +59,9 @@ export const HatchScreen: React.FC = () => {
         lastPulls.map((char) => (
           <View key={char.id} style={styles.card}>
             <Text style={styles.name}>{char.name}</Text>
-            <Text style={styles.meta}>{char.role} • {RARITY_LABEL[char.rarity]} ({char.rarity}★)</Text>
+            <Text style={styles.meta}>
+              {char.role} • {RARITY_LABEL[char.rarity]} ({char.rarity}★)
+            </Text>
             <StatBlockView stats={char.stats} />
           </View>
         ))

@@ -16,14 +16,7 @@ export const RARITY_RATES: { rarity: Rarity; weight: number }[] = [
   { rarity: '5', weight: 0.8 }
 ];
 
-export const ROLES = [
-  'Fisher',
-  'Diver',
-  'Speedster',
-  'Tanker',
-  'Chef',
-  'Merchant'
-] as const;
+export const ROLES = ['Fisher', 'Diver', 'Speedster', 'Tanker', 'Chef', 'Merchant'] as const;
 export type Role = (typeof ROLES)[number];
 
 export const LOCATIONS = [

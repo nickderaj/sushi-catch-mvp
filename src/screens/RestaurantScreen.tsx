@@ -32,7 +32,9 @@ export const RestaurantScreen: React.FC = () => {
         onPress={() => {
           collectIdle();
           playReward().catch(() => undefined);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+            () => undefined
+          );
         }}
       />
 
@@ -50,7 +52,10 @@ export const RestaurantScreen: React.FC = () => {
 
       <View style={styles.upgradeCard}>
         <Text style={styles.sectionTitle}>Upgrades (50 coins)</Text>
-        <PrimaryButton label="Increase Throughput" onPress={() => upgradeRestaurant('throughput')} />
+        <PrimaryButton
+          label="Increase Throughput"
+          onPress={() => upgradeRestaurant('throughput')}
+        />
         <PrimaryButton label="Increase Customer Rate" onPress={() => upgradeRestaurant('rate')} />
       </View>
     </View>

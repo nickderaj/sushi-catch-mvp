@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LOCATIONS } from '../data/gameData';
 import { randomFish, randomName, randomRole, rollRarity, rollStats } from '../utils/rng';
@@ -195,17 +203,20 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [state, loading, saveState]);
 
-  const hatchEggs = useCallback((count: number) => {
-    const actual = Math.min(count, state.eggs);
-    if (actual <= 0) return [] as Character[];
-    const pulls = Array.from({ length: actual }).map(rollCharacter);
-    setState((prev) => ({
-      ...prev,
-      eggs: prev.eggs - actual,
-      ownedCharacters: [...pulls, ...prev.ownedCharacters]
-    }));
-    return pulls;
-  }, [state.eggs]);
+  const hatchEggs = useCallback(
+    (count: number) => {
+      const actual = Math.min(count, state.eggs);
+      if (actual <= 0) return [] as Character[];
+      const pulls = Array.from({ length: actual }).map(rollCharacter);
+      setState((prev) => ({
+        ...prev,
+        eggs: prev.eggs - actual,
+        ownedCharacters: [...pulls, ...prev.ownedCharacters]
+      }));
+      return pulls;
+    },
+    [state.eggs]
+  );
 
   const completeIntro = useCallback(() => {
     setState((prev) => ({
@@ -254,7 +265,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (trip.endsAt > now()) return prev;
       const crew = prev.ownedCharacters.filter((c) => trip.crewIds.includes(c.id));
       const rewards = resolveTripRewards(crew, trip.locationId);
-      const nextTrips = prev.trips.map((t) => (t.id === tripId ? { ...t, resolved: true, rewards } : t));
+      const nextTrips = prev.trips.map((t) =>
+        t.id === tripId ? { ...t, resolved: true, rewards } : t
+      );
       return {
         ...prev,
         coins: prev.coins + rewards.coins,
@@ -358,22 +371,40 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   }, []);
 
-  const value = useMemo(() => ({
-    state,
-    loading,
-    hatchEggs,
-    completeIntro,
-    buyEggs,
-    startTrip,
-    claimTrip,
-    collectIdle,
-    tapServe,
-    upgradeRestaurant,
-    resetGame,
-    addCurrency,
-    skipTrips,
-    addFish
-  }), [state, loading, hatchEggs, completeIntro, buyEggs, startTrip, claimTrip, collectIdle, tapServe, upgradeRestaurant, resetGame, addCurrency, skipTrips, addFish]);
+  const value = useMemo(
+    () => ({
+      state,
+      loading,
+      hatchEggs,
+      completeIntro,
+      buyEggs,
+      startTrip,
+      claimTrip,
+      collectIdle,
+      tapServe,
+      upgradeRestaurant,
+      resetGame,
+      addCurrency,
+      skipTrips,
+      addFish
+    }),
+    [
+      state,
+      loading,
+      hatchEggs,
+      completeIntro,
+      buyEggs,
+      startTrip,
+      claimTrip,
+      collectIdle,
+      tapServe,
+      upgradeRestaurant,
+      resetGame,
+      addCurrency,
+      skipTrips,
+      addFish
+    ]
+  );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 };

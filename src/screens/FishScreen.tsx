@@ -43,7 +43,9 @@ export const FishScreen: React.FC = () => {
       ) : (
         state.ownedCharacters.map((char) => (
           <View key={char.id} style={styles.row}>
-            <Text style={styles.rowText}>{char.name} • {char.role} • {char.rarity}★</Text>
+            <Text style={styles.rowText}>
+              {char.name} • {char.role} • {char.rarity}★
+            </Text>
             <PrimaryButton
               label={selectedCrew.includes(char.id) ? 'Remove' : 'Add'}
               onPress={() => toggleCrew(char.id)}
@@ -77,7 +79,11 @@ export const FishScreen: React.FC = () => {
         ))}
       </View>
 
-      <PrimaryButton label="Start Trip" onPress={() => startTrip(selectedCrew, locationId, durationSec)} disabled={!canStart} />
+      <PrimaryButton
+        label="Start Trip"
+        onPress={() => startTrip(selectedCrew, locationId, durationSec)}
+        disabled={!canStart}
+      />
 
       <Text style={styles.sectionTitle}>Active Trips</Text>
       {activeTrips.length === 0 ? (
@@ -89,9 +95,13 @@ export const FishScreen: React.FC = () => {
           return (
             <View key={trip.id} style={styles.card}>
               <Text style={styles.cardTitle}>{trip.locationId.replace('_', ' ')}</Text>
-              <Text style={styles.cardMeta}>Crew: {trip.crewIds.length} • {formatSeconds(remaining)}</Text>
+              <Text style={styles.cardMeta}>
+                Crew: {trip.crewIds.length} • {formatSeconds(remaining)}
+              </Text>
               {trip.resolved && trip.rewards ? (
-                <Text style={styles.cardMeta}>Claimed: {trip.rewards.outcomeLabel} (+{trip.rewards.coins} coins)</Text>
+                <Text style={styles.cardMeta}>
+                  Claimed: {trip.rewards.outcomeLabel} (+{trip.rewards.coins} coins)
+                </Text>
               ) : (
                 <PrimaryButton
                   label={ready ? 'Claim Rewards' : 'In Progress'}
@@ -99,7 +109,9 @@ export const FishScreen: React.FC = () => {
                     claimTrip(trip.id);
                     if (ready) {
                       playReward().catch(() => undefined);
-                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+                        () => undefined
+                      );
                     }
                   }}
                   disabled={!ready}

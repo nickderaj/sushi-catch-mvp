@@ -1,17 +1,21 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-export const PrimaryButton: React.FC<{ label: string; onPress: () => void; disabled?: boolean }> = ({
-  label,
-  onPress,
-  disabled
-}) => {
+export const PrimaryButton: React.FC<{
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}> = ({ label, onPress, disabled }) => {
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [
-      styles.button,
-      disabled && styles.disabled,
-      pressed && !disabled && styles.pressed
-    ]}>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.button,
+        disabled && styles.disabled,
+        pressed && !disabled && styles.pressed
+      ]}
+    >
       <Text style={styles.label}>{label}</Text>
     </Pressable>
   );

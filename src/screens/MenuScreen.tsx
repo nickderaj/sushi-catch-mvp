@@ -5,7 +5,9 @@ import { useGame } from '../state/GameContext';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types/navigation';
 
-export const MenuScreen: React.FC<NativeStackScreenProps<RootStackParamList, 'Menu'>> = ({ navigation }) => {
+export const MenuScreen: React.FC<NativeStackScreenProps<RootStackParamList, 'Menu'>> = ({
+  navigation
+}) => {
   const { state } = useGame();
 
   const handleStart = () => {

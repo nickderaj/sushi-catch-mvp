@@ -9,12 +9,17 @@ export const DebugScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Debug Menu</Text>
-      <Text style={styles.sub}>Coins: {state.coins} • Pearls: {state.pearls} • Eggs: {state.eggs}</Text>
+      <Text style={styles.sub}>
+        Coins: {state.coins} • Pearls: {state.pearls} • Eggs: {state.eggs}
+      </Text>
 
       <PrimaryButton label="+100 Coins" onPress={() => addCurrency(100, 0, 0)} />
       <PrimaryButton label="+50 Pearls" onPress={() => addCurrency(0, 50, 0)} />
       <PrimaryButton label="+10 Eggs" onPress={() => addCurrency(0, 0, 10)} />
-      <PrimaryButton label="Starter Pack (+500 Coins, +100 Pearls, +20 Eggs)" onPress={() => addCurrency(500, 100, 20)} />
+      <PrimaryButton
+        label="Starter Pack (+500 Coins, +100 Pearls, +20 Eggs)"
+        onPress={() => addCurrency(500, 100, 20)}
+      />
 
       <View style={styles.section}>
         <PrimaryButton label="Add 5 Random Fish" onPress={() => addFish(5)} />

@@ -15,7 +15,9 @@ export const InventoryScreen: React.FC = () => {
       ) : (
         state.ownedCharacters.map((char) => (
           <View key={char.id} style={styles.card}>
-            <Text style={styles.name}>{char.name} • {char.rarity}★</Text>
+            <Text style={styles.name}>
+              {char.name} • {char.rarity}★
+            </Text>
             <Text style={styles.meta}>{char.role}</Text>
           </View>
         ))
@@ -27,7 +29,9 @@ export const InventoryScreen: React.FC = () => {
       ) : (
         state.fishInventory.map((fish) => (
           <View key={fish.id} style={styles.card}>
-            <Text style={styles.name}>{fish.name} • {fish.rarity}★</Text>
+            <Text style={styles.name}>
+              {fish.name} • {fish.rarity}★
+            </Text>
             <Text style={styles.meta}>x{fish.count}</Text>
           </View>
         ))
