@@ -1,0 +1,245 @@
+{
+  "game_title": "Sushi Catch Tycoon",
+  "subtitle": "Offline-first gacha + fishing + idle restaurant with social features",
+  "core_concept": {
+    "tagline": "Collect adorable creatures, send them fishing, grow your sushi restaurant",
+    "three_pillars": [
+      {
+        "name": "Gacha Collection",
+        "description": "Pull eggs to hatch cute characters with varying stats",
+        "engagement": "Dopamine hits from pulls + desire to complete collection"
+      },
+      {
+        "name": "Fishing Expeditions",
+        "description": "Assign crews to trips; stats determine catch quality and rewards",
+        "engagement": "Strategic team-building + anticipation of returns"
+      },
+      {
+        "name": "Restaurant Idle Economy",
+        "description": "Sell fish as sushi; earn coins offline (capped); upgrade stall",
+        "engagement": "Satisfying growth + cosmetic progression"
+      }
+    ]
+  },
+  "user_flow": {
+    "entry_point": "Launch app \u2192 tutorial hatch egg",
+    "primary_loop": [
+      "Claim idle earnings + trip rewards (30-60 sec)",
+      "Hatch/pull new egg (optional, 2 min)",
+      "Assign crew to fishing trip (1-3 min)",
+      "Check restaurant + serve customers (3-5 min active)",
+      "Upgrade stall/decorate (1-2 min)",
+      "Close app; income generates offline"
+    ],
+    "return_triggers": [
+      "Trip completion notification",
+      "Offline income cap reached",
+      "Daily login streak bonus",
+      "New event available",
+      "Friend sent booster"
+    ]
+  },
+  "characters": {
+    "total_count": "40 at launch (expand to 80)",
+    "rarity_tiers": {
+      "1_star_common": {
+        "rate": "51.2%",
+        "count": "8-10",
+        "use": "Tutorial, always relevant"
+      },
+      "2_star_uncommon": {
+        "rate": "30%",
+        "count": "10-12",
+        "use": "Early progression"
+      },
+      "3_star_rare": {
+        "rate": "15%",
+        "count": "8-10",
+        "use": "Mid-game variety"
+      },
+      "4_star_epic": {
+        "rate": "3%",
+        "count": "6-8",
+        "use": "Late-game power"
+      },
+      "5_star_legendary": {
+        "rate": "0.8 pity at 90",
+        "count": "3-5",
+        "use": "Chase targets, limited banners"
+      }
+    },
+    "stat_system": {
+      "stats": [
+        {
+          "name": "Power",
+          "affects": "catch quantity"
+        },
+        {
+          "name": "Dexterity",
+          "affects": "rare catch chance"
+        },
+        {
+          "name": "Speed",
+          "affects": "trip duration reduction"
+        },
+        {
+          "name": "Luck",
+          "affects": "treasure proc chance"
+        },
+        {
+          "name": "Expertise",
+          "affects": "sushi grade multiplier"
+        },
+        {
+          "name": "Charisma",
+          "affects": "customer rate plus tips"
+        }
+      ],
+      "stat_variance": "plus_minus 3 to 8 percent per pull",
+      "duplicate_value": "Keep for better roll, fuse for XP, use for evolution"
+    },
+    "roles": [
+      {
+        "name": "Fisher",
+        "specialty": "Balanced, safest"
+      },
+      {
+        "name": "Diver",
+        "specialty": "Rare finder, deep spots"
+      },
+      {
+        "name": "Speedster",
+        "specialty": "Fast trips, volume"
+      },
+      {
+        "name": "Tanker",
+        "specialty": "Risk reward in dangerous areas"
+      },
+      {
+        "name": "Chef",
+        "specialty": "Boosts sushi quality"
+      },
+      {
+        "name": "Merchant",
+        "specialty": "Boosts sale price"
+      }
+    ]
+  },
+  "gacha_system": {
+    "currencies": {
+      "shells": {
+        "type": "Premium",
+        "earn": "IAP only",
+        "use": "Gacha pulls, battle pass, cosmetics",
+        "conversion": "1 USD equals 100 Shells"
+      },
+      "pearls": {
+        "type": "Free earnable",
+        "earn": "Daily login, challenges, events",
+        "use": "Gacha pulls 10 pearls equals 1 pull",
+        "monthly_rate": "300-500 pearls per month for F2P"
+      }
+    },
+    "pull_rates": {
+      "one_star": "51.2 percent",
+      "two_star": "30 percent",
+      "three_star": "15 percent",
+      "four_star": "3 percent",
+      "five_star": "0.8 percent"
+    },
+    "pity_system": {
+      "hard_pity": "90 pulls guaranteed 5-star",
+      "soft_pity": "75-89 pulls 3-4 percent chance for 5-star",
+      "persistence": "Pity counter persists across sessions and banners"
+    },
+    "banners": {
+      "standard": "Evergreen 5-star pool",
+      "limited": "New 5-star every 6 weeks FOMO rotation"
+    }
+  },
+  "fishing_system": {
+    "trip_inputs": [
+      "Crew size 1-3 characters",
+      "Location 4 base Shallow Bay Coral Deep Ocean Midnight Trench",
+      "Duration 2h 4h 8h 12h"
+    ],
+    "outcomes": [
+      {
+        "score": "greater than 80",
+        "result": "Epic Legendary fish plus mats 5-10 percent"
+      },
+      {
+        "score": "60-80",
+        "result": "Uncommon Rare fish 30 percent"
+      },
+      {
+        "score": "40-60",
+        "result": "Common fish 60 percent"
+      },
+      {
+        "score": "less than 40",
+        "result": "Fish got away 5 percent loss"
+      }
+    ],
+    "rewards_per_trip": [
+      "Fish inventory",
+      "Character XP",
+      "Coins",
+      "Upgrade materials",
+      "Rare treasure drops 0.02 percent"
+    ]
+  },
+  "restaurant_system": {
+    "core_loop": [
+      "Convert fish to sushi inventory",
+      "Customers spawn every 30-90 sec",
+      "Tap to serve earn coins plus tips",
+      "Combo multiplier for rapid taps 1x-5x"
+    ],
+    "offline_income": {
+      "mechanic": "Earn coins passively over time",
+      "cap": "8 hours max prevents infinite farming",
+      "example": "5 coins per min base to 8 coins per min with upgrades"
+    },
+    "upgrades": [
+      "Increase throughput customers per min",
+      "Increase customer rate",
+      "Increase capacity",
+      "Unlock new locations"
+    ]
+  },
+  "social_features": {
+    "daily_boosters": {
+      "mechanic": "Send one booster daily to 1-5 friends",
+      "types": [
+        "2x fishing rewards 2h duration",
+        "Instant trip completion no wait",
+        "Plus 100 coins bonus"
+      ],
+      "benefit": "Incentivizes daily login plus friend checks"
+    },
+    "referral_system": {
+      "mechanics": [
+        "Invite link plus referral code",
+        "Referee gets 1 free gacha egg plus 50 pearls",
+        "Referrer gets rewards per 5 successful referrals"
+      ]
+    },
+    "offline_requirement": "All core gameplay works 100 percent offline; friend actions sync on next connection"
+  },
+  "kpis_soft_launch": {
+    "day_1_retention": "greater than 45 percent",
+    "day_7_retention": "greater than 20 percent",
+    "day_30_retention": "greater than 12 percent",
+    "arpu_day_30": "greater than 0.15 dollars",
+    "cpi_android": "less than 0.60 dollars",
+    "break_even_target": "Month 4-5"
+  },
+  "mvp_scope": {
+    "characters": "40 expand to 80 post-launch",
+    "locations": "4 base",
+    "fish_types": "20-30 items",
+    "decor_themes": "2-3 sets",
+    "dev_timeline": "14-16 weeks"
+  }
+}
