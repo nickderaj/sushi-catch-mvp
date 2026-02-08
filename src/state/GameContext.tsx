@@ -8,15 +8,15 @@ import React, {
   useState
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LOCATIONS } from '../data/gameData';
 import {
-  randomFish,
-  randomName,
-  randomRole,
-  randomSpeciesId,
-  rollRarity,
-  rollStats
-} from '../utils/rng';
+  LOCATIONS,
+  MAX_LEVEL,
+  SPECIES,
+  SPECIES_GROWTH,
+  XP_THRESHOLDS,
+  type Rarity
+} from '../data/gameData';
+import { randomFish, randomRole, randomSpeciesId, rollRarity, rollStats } from '../utils/rng';
 import { clamp, now } from '../utils/time';
 import type {
   Character,
@@ -78,13 +78,36 @@ const mergeFish = (inventory: FishItem[], adds: FishItem[]) => {
 
 const rollCharacter = (): Character => {
   const speciesId = randomSpeciesId();
+  const rarity = rollRarity();
+  const species = SPECIES.find((s) => s.id === speciesId);
   return {
     id: createId(),
-    name: randomName(),
-    rarity: rollRarity(),
+    name: species?.name ?? speciesId,
+    rarity,
     role: randomRole(),
     speciesId,
-    stats: rollStats(speciesId),
+    stats: rollStats(speciesId, rarity),
+    xp: 0,
+    level: 1,
+    createdAt: now()
+  };
+};
+
+const FISHING_SPECIES = SPECIES.filter((s) => s.fishingBias >= 2);
+
+const rollTutorialCharacter = (): Character => {
+  const species = FISHING_SPECIES[Math.floor(Math.random() * FISHING_SPECIES.length)];
+  const rarity: Rarity = '2';
+  const fishingRoles = ['Fisher', 'Diver'] as const;
+  return {
+    id: createId(),
+    name: species.name,
+    rarity,
+    role: fishingRoles[Math.floor(Math.random() * fishingRoles.length)],
+    speciesId: species.id,
+    stats: rollStats(species.id, rarity),
+    xp: 0,
+    level: 1,
     createdAt: now()
   };
 };
@@ -191,7 +214,7 @@ const resolveKitchenRewards = (staff: Character[], durationSec: number, inventor
   let coins = 0;
   let served = 0;
 
-  const fishPool = inventoryMap.values().reduce<FishItem[]>((acc, item) => {
+  const fishPool = Array.from(inventoryMap.values()).reduce<FishItem[]>((acc, item) => {
     for (let i = 0; i < item.count; i += 1) acc.push(item);
     return acc;
   }, []);
@@ -218,9 +241,36 @@ const resolveKitchenRewards = (staff: Character[], durationSec: number, inventor
   };
 };
 
+const awardXpToCharacters = (
+  characters: Character[],
+  charIds: string[],
+  xpGain: number
+): Character[] => {
+  return characters.map((c) => {
+    if (!charIds.includes(c.id)) return c;
+    const newXp = (c.xp ?? 0) + xpGain;
+    let newLevel = c.level ?? 1;
+    const newStats = { ...c.stats };
+    const growth = SPECIES_GROWTH[c.speciesId];
+
+    while (newLevel < MAX_LEVEL && newXp >= XP_THRESHOLDS[newLevel + 1]) {
+      newLevel++;
+      newStats.power += growth.power;
+      newStats.dexterity += growth.dexterity;
+      newStats.speed += growth.speed;
+      newStats.luck += growth.luck;
+      newStats.expertise += growth.expertise;
+      newStats.charisma += growth.charisma;
+    }
+
+    return { ...c, xp: newXp, level: newLevel, stats: newStats };
+  });
+};
+
 const GameContext = createContext<{
   state: PlayerState;
   loading: boolean;
+  busyCharacterIds: string[];
   hatchEggs: (count: number) => Character[];
   completeIntro: () => void;
   buyEggs: (count: number) => void;
@@ -232,6 +282,7 @@ const GameContext = createContext<{
   tapServe: (fishIds: string[]) => { coins: number; served: number };
   autoServe: () => { coins: number; served: number };
   upgradeRestaurant: (type: 'throughput' | 'rate') => void;
+  renameCharacter: (characterId: string, newName: string) => void;
   resetGame: () => void;
   addCurrency: (coins: number, pearls: number, eggs: number) => void;
   skipTrips: () => void;
@@ -240,6 +291,7 @@ const GameContext = createContext<{
 }>({
   state: defaultState,
   loading: true,
+  busyCharacterIds: [],
   hatchEggs: () => [],
   completeIntro: () => {},
   buyEggs: () => {},
@@ -251,6 +303,7 @@ const GameContext = createContext<{
   tapServe: () => ({ coins: 0, served: 0 }),
   autoServe: () => ({ coins: 0, served: 0 }),
   upgradeRestaurant: () => {},
+  renameCharacter: () => {},
   resetGame: () => {},
   addCurrency: () => {},
   skipTrips: () => {},
@@ -263,6 +316,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const lastTapRef = useRef(0);
   const comboRef = useRef(1);
+
+  const busyCharacterIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const trip of state.trips) {
+      if (!trip.resolved) trip.crewIds.forEach((id) => ids.add(id));
+    }
+    for (const shift of state.kitchenShifts) {
+      if (!shift.resolved) shift.staffIds.forEach((id) => ids.add(id));
+    }
+    return Array.from(ids);
+  }, [state.trips, state.kitchenShifts]);
 
   const saveState = useCallback(async (next: PlayerState) => {
     try {
@@ -280,11 +344,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const parsed = JSON.parse(raw) as PlayerState;
           const idleCoins = calculateIdleCoins(parsed);
           const migratedCharacters = parsed.ownedCharacters.map((char) => {
-            if (!char.speciesId) {
+            let migrated = char;
+            if (!migrated.speciesId) {
               const speciesId = randomSpeciesId();
-              return { ...char, speciesId, stats: rollStats(speciesId) };
+              migrated = { ...migrated, speciesId, stats: rollStats(speciesId, migrated.rarity) };
             }
-            return char;
+            if (migrated.xp == null) migrated = { ...migrated, xp: 0 };
+            if (migrated.level == null) migrated = { ...migrated, level: 1 };
+            return migrated;
           });
           const next: PlayerState = {
             ...parsed,
@@ -310,20 +377,27 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [state, loading, saveState]);
 
-  const hatchEggs = useCallback(
-    (count: number) => {
-      const actual = Math.min(count, state.eggs);
-      if (actual <= 0) return [] as Character[];
-      const pulls = Array.from({ length: actual }).map(rollCharacter);
-      setState((prev) => ({
+  const hatchEggs = useCallback((count: number) => {
+    let pulls: Character[] = [];
+    setState((prev) => {
+      const actual = Math.min(count, prev.eggs);
+      if (actual <= 0) return prev;
+      const isFirstHatch = prev.ownedCharacters.length === 0;
+      if (isFirstHatch) {
+        const tutorial = rollTutorialCharacter();
+        const rest = Array.from({ length: actual - 1 }).map(rollCharacter);
+        pulls = [tutorial, ...rest];
+      } else {
+        pulls = Array.from({ length: actual }).map(rollCharacter);
+      }
+      return {
         ...prev,
         eggs: prev.eggs - actual,
         ownedCharacters: [...pulls, ...prev.ownedCharacters]
-      }));
-      return pulls;
-    },
-    [state.eggs]
-  );
+      };
+    });
+    return pulls;
+  }, []);
 
   const completeIntro = useCallback(() => {
     setState((prev) => ({
@@ -381,19 +455,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...prev,
         coins: prev.coins + rewards.coins,
         fishInventory: mergeFish(prev.fishInventory, rewards.fish),
+        ownedCharacters: awardXpToCharacters(prev.ownedCharacters, trip.crewIds, rewards.xp),
         trips: nextTrips
       };
     });
     return resolvedRewards;
   }, []);
 
-  const startKitchenShift = useCallback(
-    (staffIds: string[], durationSec: number) => {
-      if (staffIds.length === 0) return;
-      const hasActive = state.kitchenShifts.some(
-        (shift) => !shift.resolved && shift.endsAt > now()
-      );
-      if (hasActive) return;
+  const startKitchenShift = useCallback((staffIds: string[], durationSec: number) => {
+    if (staffIds.length === 0) return;
+    setState((prev) => {
+      const hasActive = prev.kitchenShifts.some((shift) => !shift.resolved && shift.endsAt > now());
+      if (hasActive) return prev;
       const startedAt = now();
       const shift: KitchenShift = {
         id: createId(),
@@ -403,13 +476,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         endsAt: startedAt + durationSec * 1000,
         resolved: false
       };
-      setState((prev) => ({
+      return {
         ...prev,
         kitchenShifts: [shift, ...prev.kitchenShifts]
-      }));
-    },
-    [state.kitchenShifts]
-  );
+      };
+    });
+  }, []);
 
   const claimKitchenShift = useCallback((shiftId: string) => {
     let resolvedRewards: KitchenRewards | null = null;
@@ -484,9 +556,36 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const autoServe = useCallback(() => {
-    const available = state.fishInventory.filter((f) => f.count > 0).map((f) => f.id);
-    return tapServe(available);
-  }, [state.fishInventory, tapServe]);
+    let result = { coins: 0, served: 0 };
+    setState((prev) => {
+      const available = prev.fishInventory.filter((f) => f.count > 0);
+      if (available.length === 0) return prev;
+      const current = now();
+      const delta = current - lastTapRef.current;
+      if (delta < 2000) {
+        comboRef.current = Math.min(prev.restaurant.comboMax, comboRef.current + 1);
+      } else {
+        comboRef.current = 1;
+      }
+      lastTapRef.current = current;
+      const inventoryMap = new Map(prev.fishInventory.map((f) => [f.id, { ...f }]));
+      const chosen = available[Math.floor(Math.random() * available.length)];
+      const entry = inventoryMap.get(chosen.id);
+      if (!entry || entry.count <= 0) return prev;
+      entry.count -= 1;
+      const baseCoins = calculateFishValue(entry.rarity);
+      const tip = prev.restaurant.tipsPerTap * comboRef.current;
+      const totalCoins = baseCoins + tip;
+      const nextInventory = Array.from(inventoryMap.values()).filter((f) => f.count > 0);
+      result = { coins: totalCoins, served: 1 };
+      return {
+        ...prev,
+        coins: prev.coins + totalCoins,
+        fishInventory: nextInventory
+      };
+    });
+    return result;
+  }, []);
 
   const upgradeRestaurant = useCallback((type: 'throughput' | 'rate') => {
     setState((prev) => {
@@ -511,6 +610,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       };
     });
+  }, []);
+
+  const renameCharacter = useCallback((characterId: string, newName: string) => {
+    setState((prev) => ({
+      ...prev,
+      ownedCharacters: prev.ownedCharacters.map((c) =>
+        c.id === characterId ? { ...c, name: newName } : c
+      )
+    }));
   }, []);
 
   const resetGame = useCallback(() => {
@@ -567,6 +675,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     () => ({
       state,
       loading,
+      busyCharacterIds,
       hatchEggs,
       completeIntro,
       buyEggs,
@@ -578,6 +687,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       tapServe,
       autoServe,
       upgradeRestaurant,
+      renameCharacter,
       resetGame,
       addCurrency,
       skipTrips,
@@ -587,6 +697,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [
       state,
       loading,
+      busyCharacterIds,
       hatchEggs,
       completeIntro,
       buyEggs,
@@ -598,6 +709,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       tapServe,
       autoServe,
       upgradeRestaurant,
+      renameCharacter,
       resetGame,
       addCurrency,
       skipTrips,

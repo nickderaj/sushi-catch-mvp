@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { CrewPicker } from '../components/CrewPicker';
 import { KITCHEN_SHIFTS } from '../data/gameData';
 import { useGame } from '../state/GameContext';
 import { playReward } from '../utils/sfx';
@@ -16,7 +17,8 @@ export const RestaurantScreen: React.FC = () => {
     autoServe,
     upgradeRestaurant,
     startKitchenShift,
-    claimKitchenShift
+    claimKitchenShift,
+    busyCharacterIds
   } = useGame();
   const [localCombo, setLocalCombo] = useState(1);
   const [lastTap, setLastTap] = useState(0);
@@ -153,23 +155,14 @@ export const RestaurantScreen: React.FC = () => {
 
       <View style={styles.shiftCard}>
         <Text style={styles.sectionTitle}>Kitchen Staff</Text>
-        <Text style={styles.sub}>Assign 1-3 pets to run the shop.</Text>
-        {state.ownedCharacters.length === 0 ? (
-          <Text style={styles.warning}>No pets yet.</Text>
-        ) : (
-          state.ownedCharacters.map((char) => (
-            <View key={char.id} style={styles.fishRow}>
-              <Text style={styles.fishLabel}>
-                {char.name} • {char.role} • EXP {char.stats.expertise} • CHA {char.stats.charisma}
-              </Text>
-              <PrimaryButton
-                label={selectedStaff.includes(char.id) ? 'Remove' : 'Add'}
-                onPress={() => toggleStaff(char.id)}
-                disabled={!selectedStaff.includes(char.id) && selectedStaff.length >= 3}
-              />
-            </View>
-          ))
-        )}
+        <CrewPicker
+          characters={state.ownedCharacters}
+          selected={selectedStaff}
+          onToggle={toggleStaff}
+          max={3}
+          title="Select Staff"
+          disabledIds={busyCharacterIds}
+        />
 
         <View style={styles.pillRow}>
           {KITCHEN_SHIFTS.map((shift) => (

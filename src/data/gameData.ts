@@ -168,6 +168,35 @@ export const SPECIES: Species[] = [
   }
 ];
 
+export const MAX_LEVEL = 20;
+
+/** Cumulative XP needed to reach each level. Index = level. */
+export const XP_THRESHOLDS: number[] = Array.from({ length: MAX_LEVEL + 1 }, (_, i) => {
+  if (i <= 1) return 0;
+  return 10 * i * (i - 1);
+});
+
+/** Deterministic stat gains per level-up, keyed by species. */
+export type StatGrowth = {
+  power: number;
+  dexterity: number;
+  speed: number;
+  luck: number;
+  expertise: number;
+  charisma: number;
+};
+
+export const SPECIES_GROWTH: Record<SpeciesId, StatGrowth> = {
+  koi: { power: 1, dexterity: 2, speed: 1, luck: 1, expertise: 2, charisma: 1 },
+  tanuki: { power: 1, dexterity: 1, speed: 2, luck: 2, expertise: 1, charisma: 1 },
+  axolotl: { power: 2, dexterity: 2, speed: 1, luck: 2, expertise: 1, charisma: 0 },
+  crane: { power: 0, dexterity: 1, speed: 1, luck: 1, expertise: 3, charisma: 2 },
+  seal: { power: 1, dexterity: 0, speed: 1, luck: 1, expertise: 2, charisma: 3 },
+  catfish: { power: 3, dexterity: 1, speed: 1, luck: 1, expertise: 1, charisma: 1 },
+  squid: { power: 1, dexterity: 2, speed: 2, luck: 1, expertise: 1, charisma: 1 },
+  turtle: { power: 1, dexterity: 1, speed: 0, luck: 2, expertise: 2, charisma: 2 }
+};
+
 export const LOCATIONS = [
   { id: 'shallow_bay', name: 'Shallow Bay' },
   { id: 'coral_reef', name: 'Coral Reef' },

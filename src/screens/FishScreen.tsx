@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { CrewPicker } from '../components/CrewPicker';
 import { DURATIONS, LOCATIONS } from '../data/gameData';
 import { useGame } from '../state/GameContext';
 import { formatSeconds, now } from '../utils/time';
@@ -9,10 +10,10 @@ import { playReward } from '../utils/sfx';
 import type { TripRewards } from '../state/gameTypes';
 
 export const FishScreen: React.FC = () => {
-  const { state, startTrip, claimTrip } = useGame();
+  const { state, startTrip, claimTrip, busyCharacterIds } = useGame();
   const [selectedCrew, setSelectedCrew] = useState<string[]>([]);
-  const [locationId, setLocationId] = useState(LOCATIONS[0].id);
-  const [durationSec, setDurationSec] = useState(DURATIONS[0].seconds);
+  const [locationId, setLocationId] = useState<string>(LOCATIONS[0].id);
+  const [durationSec, setDurationSec] = useState<number>(DURATIONS[0].seconds);
   const [rewardModal, setRewardModal] = useState(false);
   const [lastRewards, setLastRewards] = useState<TripRewards | null>(null);
   const [, setTick] = useState(0);
@@ -55,23 +56,14 @@ export const FishScreen: React.FC = () => {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Fishing Expeditions</Text>
 
-      <Text style={styles.sectionTitle}>Select Crew (1-3)</Text>
-      {state.ownedCharacters.length === 0 ? (
-        <Text style={styles.empty}>No characters yet. Hatch some eggs first.</Text>
-      ) : (
-        state.ownedCharacters.map((char) => (
-          <View key={char.id} style={styles.row}>
-            <Text style={styles.rowText}>
-              {char.name} • {char.role} • {char.rarity}★
-            </Text>
-            <PrimaryButton
-              label={selectedCrew.includes(char.id) ? 'Remove' : 'Add'}
-              onPress={() => toggleCrew(char.id)}
-              disabled={!selectedCrew.includes(char.id) && selectedCrew.length >= 3}
-            />
-          </View>
-        ))
-      )}
+      <CrewPicker
+        characters={state.ownedCharacters}
+        selected={selectedCrew}
+        onToggle={toggleCrew}
+        max={3}
+        title="Select Crew"
+        disabledIds={busyCharacterIds}
+      />
 
       <Text style={styles.sectionTitle}>Location</Text>
       <View style={styles.pillRow}>

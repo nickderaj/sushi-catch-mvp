@@ -8,6 +8,8 @@ export type Character = {
   role: Role;
   speciesId: SpeciesId;
   stats: StatBlock;
+  xp: number;
+  level: number;
   createdAt: number;
 };
 

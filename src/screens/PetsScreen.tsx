@@ -5,24 +5,7 @@ import { useGame } from '../state/GameContext';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import type { RootStackParamList } from '../types/navigation';
-
-const rarityBorder = (rarity: string | null) => {
-  if (!rarity) return '#A3A3A3';
-  switch (rarity) {
-    case '1':
-      return '#FFFFFF';
-    case '2':
-      return '#22C55E';
-    case '3':
-      return '#3B82F6';
-    case '4':
-      return '#A855F7';
-    case '5':
-      return '#A855F7';
-    default:
-      return '#FFFFFF';
-  }
-};
+import { rarityColor } from '../utils/rarity';
 
 export const PetsScreen: React.FC = () => {
   const { state } = useGame();
@@ -52,7 +35,7 @@ export const PetsScreen: React.FC = () => {
       keyExtractor={(item) => item.species.id}
       renderItem={({ item }) => {
         const isCollected = item.count > 0;
-        const borderColor = rarityBorder(item.highest);
+        const borderColor = rarityColor(item.highest);
         return (
           <Pressable
             style={[styles.card, { borderColor }, !isCollected && styles.cardLocked]}

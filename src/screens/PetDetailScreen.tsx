@@ -1,17 +1,21 @@
-import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SPECIES } from '../data/gameData';
 import { useGame } from '../state/GameContext';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types/navigation';
 import { StatBlockView } from '../components/StatBlock';
+import { CharacterDetailModal } from '../components/CharacterDetailModal';
+import type { Character } from '../state/gameTypes';
+import { rarityColor } from '../utils/rarity';
 
 export const PetDetailScreen: React.FC<NativeStackScreenProps<RootStackParamList, 'PetDetail'>> = ({
   route
 }) => {
-  const { state } = useGame();
+  const { state, renameCharacter } = useGame();
   const speciesId = route.params.speciesId;
   const species = SPECIES.find((entry) => entry.id === speciesId);
+  const [detailChar, setDetailChar] = useState<Character | null>(null);
 
   const owned = useMemo(() => {
     return state.ownedCharacters.filter((char) => char.speciesId === speciesId);
@@ -44,16 +48,31 @@ export const PetDetailScreen: React.FC<NativeStackScreenProps<RootStackParamList
         {owned.length === 0 ? (
           <Text style={styles.empty}>No creatures collected yet.</Text>
         ) : (
-          owned.map((char) => (
-            <View key={char.id} style={styles.card}>
-              <Text style={styles.cardTitle}>
-                {char.name} • {char.rarity}★ • {char.role}
-              </Text>
-              <StatBlockView stats={char.stats} />
-            </View>
-          ))
+          owned.map((char) => {
+            const color = rarityColor(char.rarity);
+            return (
+              <Pressable
+                key={char.id}
+                style={[styles.card, { borderLeftWidth: 4, borderLeftColor: color }]}
+                onPress={() => setDetailChar(char)}
+              >
+                <Text style={styles.cardTitle}>
+                  {char.name} {'\u00B7'} {char.rarity}
+                  {'\u2605'} {'\u00B7'} {char.role}
+                </Text>
+                <StatBlockView stats={char.stats} />
+              </Pressable>
+            );
+          })
         )}
       </View>
+
+      <CharacterDetailModal
+        character={detailChar}
+        visible={!!detailChar}
+        onClose={() => setDetailChar(null)}
+        onRename={renameCharacter}
+      />
     </ScrollView>
   );
 };

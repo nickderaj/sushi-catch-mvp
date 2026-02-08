@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { CharacterDetailModal } from '../components/CharacterDetailModal';
 import { RARITY_LABEL, SPECIES } from '../data/gameData';
 import { useGame } from '../state/GameContext';
 import type { Character } from '../state/gameTypes';
+import { rarityColor } from '../utils/rarity';
 import { playEggCrack, playReward } from '../utils/sfx';
 
 export const HatchScreen: React.FC = () => {
-  const { state, hatchEggs, buyEggs } = useGame();
+  const { state, hatchEggs, buyEggs, renameCharacter } = useGame();
   const [lastPulls, setLastPulls] = useState<Character[]>([]);
+  const [detailChar, setDetailChar] = useState<Character | null>(null);
 
   const handleHatch = async (count: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
@@ -19,7 +22,16 @@ export const HatchScreen: React.FC = () => {
     if (pulls.length > 0) {
       playReward().catch(() => undefined);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+      if (pulls.length === 1) {
+        setDetailChar(pulls[0]);
+      }
     }
+  };
+
+  const handleRename = (id: string, name: string) => {
+    renameCharacter(id, name);
+    setLastPulls((prev) => prev.map((c) => (c.id === id ? { ...c, name } : c)));
+    setDetailChar((prev) => (prev && prev.id === id ? { ...prev, name } : prev));
   };
 
   return (
@@ -55,19 +67,37 @@ export const HatchScreen: React.FC = () => {
       {lastPulls.length === 0 ? (
         <Text style={styles.empty}>No pulls yet.</Text>
       ) : (
-        lastPulls.map((char) => (
-          <View key={char.id} style={styles.card}>
-            <Text style={styles.name}>{char.name}</Text>
-            <Text style={styles.meta}>
-              {SPECIES.find((entry) => entry.id === char.speciesId)?.name ?? 'Unknown'} •{' '}
-              {char.role} • {RARITY_LABEL[char.rarity]} ({char.rarity}★)
-            </Text>
-            <Text style={styles.meta}>
-              Base: {char.stats.power} PWR • {char.stats.expertise} EXP
-            </Text>
-          </View>
-        ))
+        lastPulls.map((char) => {
+          const color = rarityColor(char.rarity);
+          return (
+            <Pressable
+              key={char.id}
+              style={[styles.card, { borderLeftWidth: 4, borderLeftColor: color }]}
+              onPress={() => setDetailChar(char)}
+            >
+              <Text style={styles.name}>{char.name}</Text>
+              <Text style={styles.meta}>
+                {SPECIES.find((entry) => entry.id === char.speciesId)?.name ?? 'Unknown'} {'\u00B7'}{' '}
+                {char.role} {'\u00B7'}{' '}
+                <Text style={{ color }}>
+                  {RARITY_LABEL[char.rarity]} ({char.rarity}
+                  {'\u2605'})
+                </Text>
+              </Text>
+              <Text style={styles.meta}>
+                Base: {char.stats.power} PWR {'\u00B7'} {char.stats.expertise} EXP
+              </Text>
+            </Pressable>
+          );
+        })
       )}
+
+      <CharacterDetailModal
+        character={detailChar}
+        visible={!!detailChar}
+        onClose={() => setDetailChar(null)}
+        onRename={handleRename}
+      />
     </ScrollView>
   );
 };
