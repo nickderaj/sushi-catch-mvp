@@ -1,8 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { EGG_TYPES, LOCATIONS } from '../data/gameData';
+import { EGG_TYPES, LOCATIONS, ROLES } from '../data/gameData';
 import { randomFish, randomName, randomRole, randomSpeciesId, rollStats } from '../utils/rng';
 import { clamp, now } from '../utils/time';
+import { getLevelForXp } from '../utils/leveling';
 import type { Character, PlayerState, Trip, TripRewards } from './gameTypes';
 import type { Rarity } from '../data/gameData';
 
@@ -40,8 +41,9 @@ const COINS_PER_FISH = 2;
 const getIdleRate = (state: PlayerState) => {
   const staff = state.ownedCharacters.filter((char) => state.restaurantStaffIds.includes(char.id));
   const charismaSum = staff.reduce((sum, char) => sum + char.stats.charisma, 0);
-  const multiplier = 1 + charismaSum / 300;
-  return Math.max(1, Math.round(state.restaurant.coinsPerMin * multiplier));
+  const base = Math.max(2, state.restaurant.coinsPerMin);
+  const multiplier = 1 + charismaSum / 40;
+  return Math.max(1, Math.round(base * multiplier));
 };
 
 const getIdleCapMinutes = (state: PlayerState) => {
@@ -71,14 +73,21 @@ const calculateIdleEarnings = (state: PlayerState) => {
 
 const rollCharacter = (rarity: Rarity): Character => {
   const speciesId = randomSpeciesId();
+  const role = randomRole();
   return {
     id: createId(),
     name: randomName(),
     rarity,
-    role: randomRole(),
+    role,
     speciesId,
     level: 1,
-    stats: rollStats(speciesId, rarity),
+    xp: 0,
+    stats: rollStats(speciesId, rarity, role),
+    fishingTrips: 0,
+    restaurantMinutes: 0,
+    coinsFromRestaurant: 0,
+    fishCollected: 0,
+    treasuresCollected: 0,
     createdAt: now()
   };
 };
@@ -113,10 +122,10 @@ const resolveTripRewards = (crew: Character[], locationId: string): TripRewards 
   }
   const statTotal = crew.reduce((sum, char) => {
     const s = char.stats;
-    return sum + s.power + s.dexterity + s.speed + s.luck + s.stamina + s.charisma;
+    return sum + s.power + s.dexterity + s.speed + s.luck;
   }, 0);
-  const avgStat = statTotal / (crew.length * 6);
-  const score = clamp(Math.round((avgStat / 70) * 100 + Math.random() * 10), 0, 100);
+  const avgStat = statTotal / (crew.length * 4);
+  const score = clamp(Math.round(avgStat * 2.5 + Math.random() * 8), 0, 100);
 
   let outcomeLabel = 'Common haul';
   let rarity: '1' | '2' | '3' | '4' | '5' = '1';
@@ -134,10 +143,10 @@ const resolveTripRewards = (crew: Character[], locationId: string): TripRewards 
     rarity = '1';
   }
 
-  const fishCount = score < 40 ? 0 : Math.max(1, Math.round(score / 30));
+  const fishCount = score < 25 ? 0 : Math.max(1, Math.round(Math.log(score + 1) * 2));
   const fish = Array.from({ length: fishCount }).map(() => {
     const fishName = randomFish();
-    const value = fishValueForRarity(rarity);
+    const value = Math.round(fishValueForRarity(rarity) * Math.log(score + 1));
     return {
       id: `${locationId}-${fishName}-${createId()}`,
       name: fishName,
@@ -168,9 +177,10 @@ const GameContext = createContext<{
   hatchEggs: (rarity: Rarity, count: number) => Character[];
   completeIntro: () => void;
   buyEggs: (rarity: Rarity, count: number) => void;
+  renameCharacter: (id: string, name: string) => void;
   startTrip: (crewIds: string[], locationId: string, durationSec: number) => void;
   claimTrip: (tripId: string) => TripRewards | null;
-  collectIdle: () => void;
+  collectIdle: () => { coins: number; staffXp: Array<{ id: string; xp: number }> };
   setRestaurantStaff: (ids: string[]) => void;
   upgradeRestaurant: (type: 'throughput' | 'rate') => void;
   resetGame: () => void;
@@ -189,9 +199,10 @@ const GameContext = createContext<{
   hatchEggs: () => [],
   completeIntro: () => {},
   buyEggs: () => {},
+  renameCharacter: () => {},
   startTrip: () => {},
   claimTrip: () => null,
-  collectIdle: () => {},
+  collectIdle: () => ({ coins: 0, staffXp: [] }),
   setRestaurantStaff: () => {},
   upgradeRestaurant: () => {},
   resetGame: () => {},
@@ -221,13 +232,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const parsed = JSON.parse(raw) as PlayerState & { pearls?: number; eggs?: number };
           const migratedCharacters = (parsed.ownedCharacters ?? []).map((char) => {
             const baseLevel = char.level ?? 1;
+            const role = ROLES.includes(char.role) ? char.role : 'Fisher';
             if (!char.speciesId) {
               const speciesId = randomSpeciesId();
               return {
                 ...char,
                 level: baseLevel,
+                xp: char.xp ?? 0,
                 speciesId,
-                stats: rollStats(speciesId, char.rarity)
+                role,
+                stats: rollStats(speciesId, char.rarity, role),
+                fishingTrips: char.fishingTrips ?? 0,
+                restaurantMinutes: char.restaurantMinutes ?? 0,
+                coinsFromRestaurant: char.coinsFromRestaurant ?? 0,
+                fishCollected: char.fishCollected ?? 0,
+                treasuresCollected: char.treasuresCollected ?? 0
               };
             }
             const stats = { ...(char.stats as Record<string, number>) } as any;
@@ -235,7 +254,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
               stats.stamina = stats.expertise;
               delete stats.expertise;
             }
-            return { ...char, level: baseLevel, stats };
+            return {
+              ...char,
+              level: baseLevel,
+              xp: char.xp ?? 0,
+              stats,
+              role,
+              fishingTrips: char.fishingTrips ?? 0,
+              restaurantMinutes: char.restaurantMinutes ?? 0,
+              coinsFromRestaurant: char.coinsFromRestaurant ?? 0,
+              fishCollected: char.fishCollected ?? 0,
+              treasuresCollected: char.treasuresCollected ?? 0
+            };
           });
           const eggsByRarity: Record<Rarity, number> = {
             '1': parsed.eggsByRarity?.['1'] ?? parsed.eggs ?? 0,
@@ -321,10 +351,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, []);
 
+  const renameCharacter = useCallback((id: string, name: string) => {
+    setState((prev) => ({
+      ...prev,
+      ownedCharacters: prev.ownedCharacters.map((char) =>
+        char.id === id ? { ...char, name } : char
+      )
+    }));
+  }, []);
+
   const startTrip = useCallback((crewIds: string[], locationId: string, durationSec: number) => {
     if (crewIds.length === 0) return;
     const locationExists = LOCATIONS.some((loc) => loc.id === locationId);
     if (!locationExists) return;
+    const staffSet = new Set(state.restaurantStaffIds);
+    if (crewIds.some((id) => staffSet.has(id))) return;
     const startedAt = now();
     const trip: Trip = {
       id: createId(),
@@ -354,34 +395,81 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const nextTrips = prev.trips.map((t) =>
         t.id === tripId ? { ...t, resolved: true, rewards } : t
       );
+      const timeXp = Math.max(1, Math.round(trip.durationSec / 5));
+      const nextCharacters = prev.ownedCharacters.map((char) => {
+        if (!trip.crewIds.includes(char.id)) return char;
+        const nextXp = (char.xp ?? 0) + rewards.xp + timeXp;
+        return {
+          ...char,
+          fishingTrips: char.fishingTrips + 1,
+          fishCollected: char.fishCollected + rewards.fishCurrency,
+          treasuresCollected: char.treasuresCollected + (rewards.treasure ? 1 : 0),
+          xp: nextXp,
+          level: getLevelForXp(nextXp)
+        };
+      });
       return {
         ...prev,
         coins: prev.coins + rewards.coins,
         fishCurrency: prev.fishCurrency + rewards.fishCurrency,
         shells: prev.shells + rewards.shells,
-        trips: nextTrips
+        trips: nextTrips,
+        ownedCharacters: nextCharacters
       };
     });
     return resolvedRewards;
   }, []);
 
   const collectIdle = useCallback(() => {
+    let summary: { coins: number; staffXp: Array<{ id: string; xp: number }> } = {
+      coins: 0,
+      staffXp: []
+    };
     setState((prev) => {
       const idlePreview = calculateIdleEarnings(prev);
+      const staffIds = prev.restaurantStaffIds;
+      const elapsedMs = now() - prev.lastActiveAt;
+      const elapsedMin = Math.floor(elapsedMs / 60000);
+      const capMin = getIdleCapMinutes(prev);
+      const effectiveMin = clamp(elapsedMin, 0, capMin);
+      const xpGain = Math.max(1, Math.round(effectiveMin * 2));
+      const staffXp = staffIds.map((id) => ({ id, xp: xpGain }));
+      summary = { coins: idlePreview.coins, staffXp };
+      const nextCharacters = prev.ownedCharacters.map((char) => {
+        if (!staffIds.includes(char.id)) return char;
+        const nextXp = (char.xp ?? 0) + xpGain;
+        return {
+          ...char,
+          restaurantMinutes: char.restaurantMinutes + effectiveMin,
+          coinsFromRestaurant: char.coinsFromRestaurant + idlePreview.coins,
+          xp: nextXp,
+          level: getLevelForXp(nextXp)
+        };
+      });
       return {
         ...prev,
         coins: prev.coins + idlePreview.coins,
         fishCurrency: Math.max(0, prev.fishCurrency - idlePreview.fishUsed),
+        ownedCharacters: nextCharacters,
         lastActiveAt: now()
       };
     });
+    return summary;
   }, []);
 
   const setRestaurantStaff = useCallback((ids: string[]) => {
-    setState((prev) => ({
-      ...prev,
-      restaurantStaffIds: ids
-    }));
+    setState((prev) => {
+      const activeTripCrew = new Set(
+        prev.trips
+          .filter((trip) => !trip.resolved && trip.endsAt > now())
+          .flatMap((trip) => trip.crewIds)
+      );
+      const filtered = ids.filter((id) => !activeTripCrew.has(id));
+      return {
+        ...prev,
+        restaurantStaffIds: filtered
+      };
+    });
   }, []);
 
   const upgradeRestaurant = useCallback((type: 'throughput' | 'rate') => {
@@ -460,6 +548,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       hatchEggs,
       completeIntro,
       buyEggs,
+      renameCharacter,
       startTrip,
       claimTrip,
       collectIdle,
@@ -477,6 +566,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       hatchEggs,
       completeIntro,
       buyEggs,
+      renameCharacter,
       startTrip,
       claimTrip,
       collectIdle,

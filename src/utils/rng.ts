@@ -5,7 +5,8 @@ import {
   CHARACTER_NAMES,
   FISH_TYPES,
   SPECIES,
-  SpeciesId
+  SpeciesId,
+  Role
 } from '../data/gameData';
 
 export type StatBlock = {
@@ -42,25 +43,61 @@ const RARITY_BONUS: Record<Rarity, number> = {
   '5': 45
 };
 
-export const rollStats = (speciesId: SpeciesId, rarity: Rarity = '1'): StatBlock => {
+const roleMainStat: Record<Role, keyof StatBlock> = {
+  Fisher: 'power',
+  Diver: 'dexterity',
+  Speedster: 'speed',
+  Blessed: 'luck',
+  Chef: 'stamina',
+  Merchant: 'charisma'
+};
+
+export const rollStats = (
+  speciesId: SpeciesId,
+  rarity: Rarity = '1',
+  role: Role = 'Fisher'
+): StatBlock => {
   const species = SPECIES.find((entry) => entry.id === speciesId) ?? SPECIES[0];
   const base = species.baselineStats;
   const biasFishing = species.fishingBias;
   const biasKitchen = species.kitchenBias;
   const bonus = RARITY_BONUS[rarity];
+  const mainStat = roleMainStat[role];
+  const fishingRole =
+    role === 'Fisher' || role === 'Diver' || role === 'Speedster' || role === 'Blessed';
+  const cookingRole = role === 'Chef' || role === 'Merchant';
 
-  const applyStat = (baseValue: number) => {
-    const rolled = Math.round(baseValue + bonus + rand(0, 5));
+  const applyWithMultiplier = (baseValue: number, multiplier: number) => {
+    const roll = bonus + rand(0, 5);
+    const rolled = Math.round(baseValue + roll * multiplier);
     return Math.max(baseValue, rolled);
   };
 
   return {
-    power: applyStat(base.power + biasFishing * 2),
-    dexterity: applyStat(base.dexterity + biasFishing * 2),
-    speed: applyStat(base.speed + biasFishing),
-    luck: applyStat(base.luck + biasFishing),
-    stamina: applyStat(base.stamina + biasKitchen * 2),
-    charisma: applyStat(base.charisma + biasKitchen * 2)
+    power:
+      mainStat === 'power'
+        ? applyWithMultiplier(base.power + biasFishing * 2, 2)
+        : applyWithMultiplier(base.power + biasFishing * 2, fishingRole ? 1.2 : 1),
+    dexterity:
+      mainStat === 'dexterity'
+        ? applyWithMultiplier(base.dexterity + biasFishing * 2, 2)
+        : applyWithMultiplier(base.dexterity + biasFishing * 2, fishingRole ? 1.2 : 1),
+    speed:
+      mainStat === 'speed'
+        ? applyWithMultiplier(base.speed + biasFishing, 2)
+        : applyWithMultiplier(base.speed + biasFishing, fishingRole ? 1.2 : 1),
+    luck:
+      mainStat === 'luck'
+        ? applyWithMultiplier(base.luck + biasFishing, 2)
+        : applyWithMultiplier(base.luck + biasFishing, fishingRole ? 1.2 : 1),
+    stamina:
+      mainStat === 'stamina'
+        ? applyWithMultiplier(base.stamina + biasKitchen * 2, 2)
+        : applyWithMultiplier(base.stamina + biasKitchen * 2, cookingRole ? 1.2 : 1),
+    charisma:
+      mainStat === 'charisma'
+        ? applyWithMultiplier(base.charisma + biasKitchen * 2, 2)
+        : applyWithMultiplier(base.charisma + biasKitchen * 2, cookingRole ? 1.2 : 1)
   };
 };
 

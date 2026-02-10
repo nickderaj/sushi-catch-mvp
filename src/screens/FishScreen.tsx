@@ -79,18 +79,23 @@ export const FishScreen: React.FC = () => {
       ) : (
         <View style={styles.listBox}>
           <ScrollView>
-            {state.ownedCharacters.map((char) => (
-              <View key={char.id} style={styles.row}>
-                <Text style={styles.rowText}>
-                  {char.name} • {char.role}
-                </Text>
-                <PrimaryButton
-                  label={selectedCrew.includes(char.id) ? 'Remove' : 'Add'}
-                  onPress={() => toggleCrew(char.id)}
-                  disabled={!selectedCrew.includes(char.id) && selectedCrew.length >= 3}
-                />
-              </View>
-            ))}
+            {state.ownedCharacters.map((char) => {
+              const isStaff = state.restaurantStaffIds.includes(char.id);
+              return (
+                <View key={char.id} style={styles.row}>
+                  <Text style={styles.rowText}>
+                    {char.name} • {char.role}
+                  </Text>
+                  <PrimaryButton
+                    label={selectedCrew.includes(char.id) ? 'Remove' : 'Add'}
+                    onPress={() => toggleCrew(char.id)}
+                    disabled={
+                      isStaff || (!selectedCrew.includes(char.id) && selectedCrew.length >= 3)
+                    }
+                  />
+                </View>
+              );
+            })}
           </ScrollView>
         </View>
       )}

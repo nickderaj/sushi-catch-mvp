@@ -15,6 +15,8 @@ export const RestaurantScreen: React.FC = () => {
     getFishConsumedPerMin
   } = useGame();
   const [selectedStaff, setSelectedStaff] = useState<string[]>(state.restaurantStaffIds);
+  const [xpModal, setXpModal] = useState(false);
+  const [xpSummary, setXpSummary] = useState<Array<{ id: string; xp: number }>>([]);
 
   useEffect(() => {
     setSelectedStaff(state.restaurantStaffIds);
@@ -26,8 +28,9 @@ export const RestaurantScreen: React.FC = () => {
 
   const idleRate = useMemo(() => {
     const charismaSum = staff.reduce((sum, char) => sum + char.stats.charisma, 0);
-    const multiplier = 1 + charismaSum / 300;
-    return Math.round(state.restaurant.coinsPerMin * multiplier);
+    const multiplier = 1 + charismaSum / 40;
+    const base = Math.max(2, state.restaurant.coinsPerMin);
+    return Math.max(1, Math.round(base * multiplier));
   }, [staff, state.restaurant.coinsPerMin]);
 
   const idleCap = useMemo(() => {
@@ -62,7 +65,9 @@ export const RestaurantScreen: React.FC = () => {
       <PrimaryButton
         label="Collect Idle Earnings"
         onPress={() => {
-          collectIdle();
+          const summary = collectIdle();
+          setXpSummary(summary.staffXp);
+          setXpModal(true);
           playReward().catch(() => undefined);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
             () => undefined
@@ -77,18 +82,27 @@ export const RestaurantScreen: React.FC = () => {
         ) : (
           <View style={styles.listBox}>
             <ScrollView>
-              {state.ownedCharacters.map((char) => (
-                <View key={char.id} style={styles.row}>
-                  <Text style={styles.rowText}>
-                    {char.name} • {char.role} • STA {char.stats.stamina} • CHA {char.stats.charisma}
-                  </Text>
-                  <PrimaryButton
-                    label={selectedStaff.includes(char.id) ? 'Remove' : 'Add'}
-                    onPress={() => toggleStaff(char.id)}
-                    disabled={!selectedStaff.includes(char.id) && selectedStaff.length >= 3}
-                  />
-                </View>
-              ))}
+              {state.ownedCharacters.map((char) => {
+                const isOnTrip = state.trips.some(
+                  (trip) =>
+                    !trip.resolved && trip.endsAt > Date.now() && trip.crewIds.includes(char.id)
+                );
+                return (
+                  <View key={char.id} style={styles.row}>
+                    <Text style={styles.rowText}>
+                      {char.name} • {char.role} • STA {char.stats.stamina} • CHA{' '}
+                      {char.stats.charisma}
+                    </Text>
+                    <PrimaryButton
+                      label={selectedStaff.includes(char.id) ? 'Remove' : 'Add'}
+                      onPress={() => toggleStaff(char.id)}
+                      disabled={
+                        isOnTrip || (!selectedStaff.includes(char.id) && selectedStaff.length >= 3)
+                      }
+                    />
+                  </View>
+                );
+              })}
             </ScrollView>
           </View>
         )}
@@ -103,6 +117,27 @@ export const RestaurantScreen: React.FC = () => {
         />
         <PrimaryButton label="Increase Customer Rate" onPress={() => upgradeRestaurant('rate')} />
       </View>
+
+      {xpModal ? (
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Kitchen XP Earned</Text>
+            {xpSummary.length === 0 ? (
+              <Text style={styles.modalMeta}>No staff assigned.</Text>
+            ) : (
+              xpSummary.map((entry) => {
+                const name = state.ownedCharacters.find((c) => c.id === entry.id)?.name ?? 'Staff';
+                return (
+                  <Text key={entry.id} style={styles.modalMeta}>
+                    {name}: +{entry.xp} XP
+                  </Text>
+                );
+              })
+            )}
+            <PrimaryButton label="Close" onPress={() => setXpModal(false)} />
+          </View>
+        </View>
+      ) : null}
     </ScrollView>
   );
 };
@@ -156,5 +191,29 @@ const styles = StyleSheet.create({
   },
   listBox: {
     maxHeight: 220
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    padding: 24
+  },
+  modalCard: {
+    backgroundColor: '#FFF1E2',
+    borderRadius: 16,
+    padding: 16
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8
+  },
+  modalMeta: {
+    color: '#7A5A44',
+    marginBottom: 4
   }
 });

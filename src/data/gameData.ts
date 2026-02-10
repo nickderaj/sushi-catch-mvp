@@ -16,7 +16,7 @@ export const RARITY_RATES: { rarity: Rarity; weight: number }[] = [
   { rarity: '5', weight: 0.8 }
 ];
 
-export const ROLES = ['Fisher', 'Diver', 'Speedster', 'Tanker', 'Chef', 'Merchant'] as const;
+export const ROLES = ['Fisher', 'Diver', 'Speedster', 'Blessed', 'Chef', 'Merchant'] as const;
 export type Role = (typeof ROLES)[number];
 
 export type SpeciesId =
@@ -51,12 +51,12 @@ export const SPECIES: Species[] = [
     name: 'Koi Sprite',
     bio: 'A calm river guardian with steady hands and a taste for precision.',
     baselineStats: {
-      power: 0,
-      dexterity: 0,
-      speed: 0,
-      luck: 0,
-      stamina: 0,
-      charisma: 0
+      power: 2,
+      dexterity: 4,
+      speed: 1,
+      luck: 1,
+      stamina: 3,
+      charisma: 2
     },
     fishingBias: 2,
     kitchenBias: 1
@@ -66,12 +66,12 @@ export const SPECIES: Species[] = [
     name: 'Tanuki Trickster',
     bio: 'A playful shapeshifter who loves risky trips and fast service.',
     baselineStats: {
-      power: 0,
-      dexterity: 0,
-      speed: 0,
-      luck: 0,
-      stamina: 0,
-      charisma: 0
+      power: 1,
+      dexterity: 2,
+      speed: 4,
+      luck: 3,
+      stamina: 1,
+      charisma: 2
     },
     fishingBias: 2,
     kitchenBias: 0
@@ -81,11 +81,11 @@ export const SPECIES: Species[] = [
     name: 'Axolotl Diver',
     bio: 'A deep-water explorer that specializes in rare finds.',
     baselineStats: {
-      power: 0,
-      dexterity: 0,
-      speed: 0,
-      luck: 0,
-      stamina: 0,
+      power: 3,
+      dexterity: 4,
+      speed: 1,
+      luck: 4,
+      stamina: 1,
       charisma: 0
     },
     fishingBias: 3,
@@ -97,11 +97,11 @@ export const SPECIES: Species[] = [
     bio: 'Elegant and focused, elevates sushi quality with delicate technique.',
     baselineStats: {
       power: 0,
-      dexterity: 0,
-      speed: 0,
-      luck: 0,
-      stamina: 0,
-      charisma: 0
+      dexterity: 2,
+      speed: 1,
+      luck: 1,
+      stamina: 4,
+      charisma: 3
     },
     fishingBias: 0,
     kitchenBias: 3
@@ -111,12 +111,12 @@ export const SPECIES: Species[] = [
     name: 'Harbor Seal',
     bio: 'Friendly and efficient, keeps the shop running smoothly.',
     baselineStats: {
-      power: 0,
-      dexterity: 0,
-      speed: 0,
-      luck: 0,
-      stamina: 0,
-      charisma: 0
+      power: 1,
+      dexterity: 1,
+      speed: 2,
+      luck: 2,
+      stamina: 3,
+      charisma: 4
     },
     fishingBias: 0,
     kitchenBias: 3
@@ -126,12 +126,12 @@ export const SPECIES: Species[] = [
     name: 'Catfish Captain',
     bio: 'A tough leader who excels at hauling big catches.',
     baselineStats: {
-      power: 0,
-      dexterity: 0,
+      power: 5,
+      dexterity: 1,
       speed: 0,
-      luck: 0,
-      stamina: 0,
-      charisma: 0
+      luck: 1,
+      stamina: 1,
+      charisma: 1
     },
     fishingBias: 3,
     kitchenBias: 0
@@ -141,12 +141,12 @@ export const SPECIES: Species[] = [
     name: 'Ink Squid',
     bio: 'Quick hands and sly tactics; great in both river and kitchen.',
     baselineStats: {
-      power: 0,
-      dexterity: 0,
-      speed: 0,
-      luck: 0,
-      stamina: 0,
-      charisma: 0
+      power: 1,
+      dexterity: 3,
+      speed: 4,
+      luck: 1,
+      stamina: 1,
+      charisma: 2
     },
     fishingBias: 2,
     kitchenBias: 1
@@ -156,12 +156,12 @@ export const SPECIES: Species[] = [
     name: 'Sea Turtle',
     bio: 'Slow but dependable, adds stability to any crew.',
     baselineStats: {
-      power: 0,
-      dexterity: 0,
+      power: 2,
+      dexterity: 1,
       speed: 0,
-      luck: 0,
-      stamina: 0,
-      charisma: 0
+      luck: 4,
+      stamina: 3,
+      charisma: 1
     },
     fishingBias: 1,
     kitchenBias: 1
@@ -234,3 +234,20 @@ export const FISH_TYPES = [
   'Kelp Carp',
   'Moonfish'
 ];
+
+export const MAX_LEVEL = 20;
+
+const generateXpThresholds = () => {
+  const levels = MAX_LEVEL;
+  const start = 10;
+  const end = 18000;
+  const thresholds: number[] = Array.from({ length: levels + 1 }, () => 0);
+  for (let level = 2; level <= levels; level += 1) {
+    const t = (level - 2) / (levels - 2);
+    const xp = Math.round(start * Math.pow(end / start, t));
+    thresholds[level] = xp;
+  }
+  return thresholds;
+};
+
+export const XP_THRESHOLDS = generateXpThresholds();

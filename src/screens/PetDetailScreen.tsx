@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View, Pressable, TextInput } from 'react-native';
 import { SPECIES } from '../data/gameData';
 import { useGame } from '../state/GameContext';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types/navigation';
 import { StatBlockView } from '../components/StatBlock';
+import { getXpProgress } from '../utils/leveling';
 import type { Character } from '../state/gameTypes';
 
 const rarityBorder = (rarity: string) => {
@@ -27,10 +28,11 @@ const rarityBorder = (rarity: string) => {
 export const PetDetailScreen: React.FC<NativeStackScreenProps<RootStackParamList, 'PetDetail'>> = ({
   route
 }) => {
-  const { state } = useGame();
+  const { state, renameCharacter } = useGame();
   const speciesId = route.params.speciesId;
   const species = SPECIES.find((entry) => entry.id === speciesId);
   const [selectedPet, setSelectedPet] = useState<Character | null>(null);
+  const [nameDraft, setNameDraft] = useState('');
 
   const owned = useMemo(() => {
     return state.ownedCharacters.filter((char) => char.speciesId === speciesId);
@@ -67,7 +69,10 @@ export const PetDetailScreen: React.FC<NativeStackScreenProps<RootStackParamList
             <Pressable
               key={char.id}
               style={[styles.card, { borderColor: rarityBorder(char.rarity) }]}
-              onPress={() => setSelectedPet(char)}
+              onPress={() => {
+                setSelectedPet(char);
+                setNameDraft(char.name);
+              }}
             >
               <Text style={styles.cardTitle}>
                 {char.name} • {char.role} • Lv {char.level}
@@ -85,7 +90,63 @@ export const PetDetailScreen: React.FC<NativeStackScreenProps<RootStackParamList
             <Text style={styles.modalMeta}>
               {selectedPet?.role} • Lv {selectedPet?.level}
             </Text>
+            {selectedPet ? (
+              <View style={styles.xpRow}>
+                {(() => {
+                  const progress = getXpProgress(selectedPet.xp ?? 0);
+                  return (
+                    <>
+                      <View style={styles.xpBar}>
+                        <View
+                          style={[
+                            styles.xpFill,
+                            { width: `${Math.round(progress.progress * 100)}%` }
+                          ]}
+                        />
+                      </View>
+                      <Text style={styles.xpText}>
+                        {selectedPet.xp ?? 0} XP • Lv {progress.level}
+                      </Text>
+                    </>
+                  );
+                })()}
+              </View>
+            ) : null}
+            <View style={styles.renameRow}>
+              <TextInput
+                value={nameDraft}
+                onChangeText={setNameDraft}
+                placeholder="Rename pet"
+                style={styles.input}
+              />
+              <Pressable
+                style={styles.renameButton}
+                onPress={() => {
+                  if (selectedPet && nameDraft.trim()) {
+                    renameCharacter(selectedPet.id, nameDraft.trim());
+                    setSelectedPet({ ...selectedPet, name: nameDraft.trim() });
+                  }
+                }}
+              >
+                <Text style={styles.renameButtonText}>Save</Text>
+              </Pressable>
+            </View>
             {selectedPet?.stats ? <StatBlockView stats={selectedPet.stats} /> : null}
+            {selectedPet ? (
+              <View style={styles.statList}>
+                <Text style={styles.statLine}>Fishing trips: {selectedPet.fishingTrips}</Text>
+                <Text style={styles.statLine}>
+                  Restaurant minutes: {selectedPet.restaurantMinutes}
+                </Text>
+                <Text style={styles.statLine}>
+                  Coins from restaurant: {selectedPet.coinsFromRestaurant}
+                </Text>
+                <Text style={styles.statLine}>Fish collected: {selectedPet.fishCollected}</Text>
+                <Text style={styles.statLine}>
+                  Treasures found: {selectedPet.treasuresCollected}
+                </Text>
+              </View>
+            ) : null}
             <Pressable style={styles.modalButton} onPress={() => setSelectedPet(null)}>
               <Text style={styles.modalButtonText}>Close</Text>
             </Pressable>
@@ -153,6 +214,56 @@ const styles = StyleSheet.create({
   modalMeta: {
     color: '#7A5A44',
     marginBottom: 8
+  },
+  xpRow: {
+    marginBottom: 8
+  },
+  xpBar: {
+    height: 10,
+    backgroundColor: '#E5D7C9',
+    borderRadius: 8,
+    overflow: 'hidden'
+  },
+  xpFill: {
+    height: 10,
+    backgroundColor: '#F47C3C'
+  },
+  xpText: {
+    marginTop: 4,
+    color: '#7A5A44',
+    fontSize: 12
+  },
+  renameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8
+  },
+  input: {
+    flex: 1,
+    backgroundColor: '#FFFDF9',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#E5D7C9'
+  },
+  renameButton: {
+    backgroundColor: '#F47C3C',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10
+  },
+  renameButtonText: {
+    color: '#1F120B',
+    fontWeight: '700'
+  },
+  statList: {
+    marginTop: 10
+  },
+  statLine: {
+    color: '#7A5A44',
+    marginBottom: 4
   },
   modalButton: {
     marginTop: 12,

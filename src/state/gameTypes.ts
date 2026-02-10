@@ -8,7 +8,13 @@ export type Character = {
   role: Role;
   speciesId: SpeciesId;
   level: number;
+  xp: number;
   stats: StatBlock;
+  fishingTrips: number;
+  restaurantMinutes: number;
+  coinsFromRestaurant: number;
+  fishCollected: number;
+  treasuresCollected: number;
   createdAt: number;
 };
 
