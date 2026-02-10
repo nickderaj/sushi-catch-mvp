@@ -7,17 +7,16 @@ export type Character = {
   rarity: Rarity;
   role: Role;
   speciesId: SpeciesId;
-  stats: StatBlock;
-  xp: number;
   level: number;
+  stats: StatBlock;
   createdAt: number;
 };
 
-export type FishItem = {
+export type FishReward = {
   id: string;
   name: string;
   rarity: Rarity;
-  count: number;
+  value: number;
 };
 
 export type Trip = {
@@ -32,30 +31,14 @@ export type Trip = {
 };
 
 export type TripRewards = {
-  fish: FishItem[];
+  fish: FishReward[];
+  fishCurrency: number;
   coins: number;
   xp: number;
-  mats: number;
+  shells: number;
   treasure: boolean;
   score: number;
   outcomeLabel: string;
-};
-
-export type KitchenShift = {
-  id: string;
-  staffIds: string[];
-  durationSec: number;
-  startedAt: number;
-  endsAt: number;
-  resolved: boolean;
-  rewards?: KitchenRewards;
-};
-
-export type KitchenRewards = {
-  coins: number;
-  served: number;
-  bonus: number;
-  details: string;
 };
 
 export type RestaurantState = {
@@ -69,13 +52,12 @@ export type RestaurantState = {
 export type PlayerState = {
   introComplete: boolean;
   coins: number;
-  pearls: number;
   shells: number;
-  eggs: number;
+  eggsByRarity: Record<Rarity, number>;
+  fishCurrency: number;
   ownedCharacters: Character[];
-  fishInventory: FishItem[];
   trips: Trip[];
-  kitchenShifts: KitchenShift[];
+  restaurantStaffIds: string[];
   restaurant: RestaurantState;
   lastActiveAt: number;
 };

@@ -13,7 +13,7 @@ export type StatBlock = {
   dexterity: number;
   speed: number;
   luck: number;
-  expertise: number;
+  stamina: number;
   charisma: number;
 };
 
@@ -34,18 +34,6 @@ export const randomSpeciesId = (): SpeciesId => {
   return SPECIES[Math.floor(Math.random() * SPECIES.length)].id;
 };
 
-/**
- * Each rarity tier gets a flat bonus per stat so tiers never overlap.
- * Rarity 1 (Common):    +0
- * Rarity 2 (Uncommon):  +8
- * Rarity 3 (Rare):      +18
- * Rarity 4 (Epic):      +30
- * Rarity 5 (Legendary): +45
- *
- * On top of the flat bonus, a small random spread (0 to +5) is added.
- * The gap between tiers is always larger than the max spread, so a
- * lower rarity can never out-stat a higher rarity of the same species.
- */
 const RARITY_BONUS: Record<Rarity, number> = {
   '1': 0,
   '2': 8,
@@ -62,7 +50,8 @@ export const rollStats = (speciesId: SpeciesId, rarity: Rarity = '1'): StatBlock
   const bonus = RARITY_BONUS[rarity];
 
   const applyStat = (baseValue: number) => {
-    return Math.round(baseValue + bonus + rand(0, 5));
+    const rolled = Math.round(baseValue + bonus + rand(0, 5));
+    return Math.max(baseValue, rolled);
   };
 
   return {
@@ -70,7 +59,7 @@ export const rollStats = (speciesId: SpeciesId, rarity: Rarity = '1'): StatBlock
     dexterity: applyStat(base.dexterity + biasFishing * 2),
     speed: applyStat(base.speed + biasFishing),
     luck: applyStat(base.luck + biasFishing),
-    expertise: applyStat(base.expertise + biasKitchen * 2),
+    stamina: applyStat(base.stamina + biasKitchen * 2),
     charisma: applyStat(base.charisma + biasKitchen * 2)
   };
 };

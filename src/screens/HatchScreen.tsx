@@ -1,103 +1,90 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { CharacterDetailModal } from '../components/CharacterDetailModal';
-import { RARITY_LABEL, SPECIES } from '../data/gameData';
+import { EGG_TYPES, RARITY_LABEL, SPECIES } from '../data/gameData';
 import { useGame } from '../state/GameContext';
 import type { Character } from '../state/gameTypes';
-import { rarityColor } from '../utils/rarity';
 import { playEggCrack, playReward } from '../utils/sfx';
 
-export const HatchScreen: React.FC = () => {
-  const { state, hatchEggs, buyEggs, renameCharacter } = useGame();
-  const [lastPulls, setLastPulls] = useState<Character[]>([]);
-  const [detailChar, setDetailChar] = useState<Character | null>(null);
+const rarityBorder = (rarity: string) => {
+  switch (rarity) {
+    case '1':
+      return '#3A2416';
+    case '2':
+      return '#22C55E';
+    case '3':
+      return '#3B82F6';
+    case '4':
+      return '#A855F7';
+    case '5':
+      return '#F97316';
+    default:
+      return '#3A2416';
+  }
+};
 
-  const handleHatch = async (count: number) => {
+export const HatchScreen: React.FC = () => {
+  const { state, hatchEggs, buyEggs } = useGame();
+  const [lastPulls, setLastPulls] = useState<Character[]>([]);
+
+  const handleHatch = async (rarity: keyof typeof state.eggsByRarity, count: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
     playEggCrack().catch(() => undefined);
-    const pulls = hatchEggs(count);
+    const pulls = hatchEggs(rarity, count);
     setLastPulls(pulls);
     if (pulls.length > 0) {
       playReward().catch(() => undefined);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-      if (pulls.length === 1) {
-        setDetailChar(pulls[0]);
-      }
     }
-  };
-
-  const handleRename = (id: string, name: string) => {
-    renameCharacter(id, name);
-    setLastPulls((prev) => prev.map((c) => (c.id === id ? { ...c, name } : c)));
-    setDetailChar((prev) => (prev && prev.id === id ? { ...prev, name } : prev));
   };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Gacha Hatch</Text>
       <View style={styles.currencyRow}>
-        <Text style={styles.currency}>Eggs: {state.eggs}</Text>
-        <Text style={styles.currency}>Pearls: {state.pearls}</Text>
+        <Text style={styles.currency}>Shells: {state.shells}</Text>
         <Text style={styles.currency}>Coins: {state.coins}</Text>
       </View>
-      <PrimaryButton
-        label="Hatch 1 (1 egg)"
-        onPress={() => handleHatch(1)}
-        disabled={state.eggs < 1}
-      />
-      <PrimaryButton
-        label="Hatch 10 (10 eggs)"
-        onPress={() => handleHatch(10)}
-        disabled={state.eggs < 10}
-      />
-      <PrimaryButton
-        label="Buy 1 Egg (10 pearls)"
-        onPress={() => buyEggs(1)}
-        disabled={state.pearls < 10}
-      />
-      <PrimaryButton
-        label="Buy 10 Eggs (100 pearls)"
-        onPress={() => buyEggs(10)}
-        disabled={state.pearls < 100}
-      />
+
+      {EGG_TYPES.map((egg) => {
+        const count = state.eggsByRarity[egg.rarity] ?? 0;
+        return (
+          <View key={egg.rarity} style={[styles.eggRow, { borderColor: rarityBorder(egg.rarity) }]}>
+            <Text style={styles.eggLabel}>
+              {egg.label} • x{count}
+            </Text>
+            <PrimaryButton
+              label="Hatch 1"
+              onPress={() => handleHatch(egg.rarity, 1)}
+              disabled={count < 1}
+            />
+            <PrimaryButton
+              label={`Buy (${egg.shellCost} shells)`}
+              onPress={() => buyEggs(egg.rarity, 1)}
+              disabled={state.shells < egg.shellCost}
+            />
+          </View>
+        );
+      })}
 
       <Text style={styles.sectionTitle}>Last Pulls</Text>
       {lastPulls.length === 0 ? (
         <Text style={styles.empty}>No pulls yet.</Text>
       ) : (
-        lastPulls.map((char) => {
-          const color = rarityColor(char.rarity);
-          return (
-            <Pressable
-              key={char.id}
-              style={[styles.card, { borderLeftWidth: 4, borderLeftColor: color }]}
-              onPress={() => setDetailChar(char)}
-            >
-              <Text style={styles.name}>{char.name}</Text>
-              <Text style={styles.meta}>
-                {SPECIES.find((entry) => entry.id === char.speciesId)?.name ?? 'Unknown'} {'\u00B7'}{' '}
-                {char.role} {'\u00B7'}{' '}
-                <Text style={{ color }}>
-                  {RARITY_LABEL[char.rarity]} ({char.rarity}
-                  {'\u2605'})
-                </Text>
-              </Text>
-              <Text style={styles.meta}>
-                Base: {char.stats.power} PWR {'\u00B7'} {char.stats.expertise} EXP
-              </Text>
-            </Pressable>
-          );
-        })
+        lastPulls.map((char) => (
+          <View key={char.id} style={styles.card}>
+            <Text style={styles.name}>{char.name}</Text>
+            <Text style={styles.meta}>
+              {SPECIES.find((entry) => entry.id === char.speciesId)?.name ?? 'Unknown'} •{' '}
+              {char.role} • {RARITY_LABEL[char.rarity]} ({char.rarity}★)
+            </Text>
+            <Text style={styles.meta}>
+              Base: {char.stats.power} PWR • {char.stats.stamina} STA
+            </Text>
+          </View>
+        ))
       )}
-
-      <CharacterDetailModal
-        character={detailChar}
-        visible={!!detailChar}
-        onClose={() => setDetailChar(null)}
-        onRename={handleRename}
-      />
     </ScrollView>
   );
 };
@@ -138,6 +125,18 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 12,
     marginBottom: 12
+  },
+  eggRow: {
+    backgroundColor: '#FFF1E2',
+    borderWidth: 2,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12
+  },
+  eggLabel: {
+    fontWeight: '700',
+    marginBottom: 8,
+    color: '#3A2416'
   },
   name: {
     fontSize: 18,

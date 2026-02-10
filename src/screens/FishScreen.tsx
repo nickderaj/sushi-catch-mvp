@@ -2,18 +2,34 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { CrewPicker } from '../components/CrewPicker';
 import { DURATIONS, LOCATIONS } from '../data/gameData';
 import { useGame } from '../state/GameContext';
 import { formatSeconds, now } from '../utils/time';
 import { playReward } from '../utils/sfx';
 import type { TripRewards } from '../state/gameTypes';
 
+const rarityBorder = (rarity: string) => {
+  switch (rarity) {
+    case '1':
+      return '#3A2416';
+    case '2':
+      return '#22C55E';
+    case '3':
+      return '#3B82F6';
+    case '4':
+      return '#A855F7';
+    case '5':
+      return '#F97316';
+    default:
+      return '#FFFFFF';
+  }
+};
+
 export const FishScreen: React.FC = () => {
-  const { state, startTrip, claimTrip, busyCharacterIds } = useGame();
+  const { state, startTrip, claimTrip } = useGame();
   const [selectedCrew, setSelectedCrew] = useState<string[]>([]);
-  const [locationId, setLocationId] = useState<string>(LOCATIONS[0].id);
-  const [durationSec, setDurationSec] = useState<number>(DURATIONS[0].seconds);
+  const [locationId, setLocationId] = useState(LOCATIONS[0].id);
+  const [durationSec, setDurationSec] = useState(DURATIONS[0].seconds);
   const [rewardModal, setRewardModal] = useState(false);
   const [lastRewards, setLastRewards] = useState<TripRewards | null>(null);
   const [, setTick] = useState(0);
@@ -55,15 +71,29 @@ export const FishScreen: React.FC = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Fishing Expeditions</Text>
+      <Text style={styles.sub}>Fish Currency: {state.fishCurrency}</Text>
 
-      <CrewPicker
-        characters={state.ownedCharacters}
-        selected={selectedCrew}
-        onToggle={toggleCrew}
-        max={3}
-        title="Select Crew"
-        disabledIds={busyCharacterIds}
-      />
+      <Text style={styles.sectionTitle}>Select Crew (1-3)</Text>
+      {state.ownedCharacters.length === 0 ? (
+        <Text style={styles.empty}>No characters yet. Hatch some eggs first.</Text>
+      ) : (
+        <View style={styles.listBox}>
+          <ScrollView>
+            {state.ownedCharacters.map((char) => (
+              <View key={char.id} style={styles.row}>
+                <Text style={styles.rowText}>
+                  {char.name} • {char.role}
+                </Text>
+                <PrimaryButton
+                  label={selectedCrew.includes(char.id) ? 'Remove' : 'Add'}
+                  onPress={() => toggleCrew(char.id)}
+                  disabled={!selectedCrew.includes(char.id) && selectedCrew.length >= 3}
+                />
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       <Text style={styles.sectionTitle}>Location</Text>
       <View style={styles.pillRow}>
@@ -109,9 +139,7 @@ export const FishScreen: React.FC = () => {
                 Crew: {trip.crewIds.length} • {formatSeconds(remaining)}
               </Text>
               {trip.resolved && trip.rewards ? (
-                <Text style={styles.cardMeta}>
-                  Claimed: {trip.rewards.outcomeLabel} (+{trip.rewards.coins} coins)
-                </Text>
+                <Text style={styles.cardMeta}>Claimed +{trip.rewards.fishCurrency} fish</Text>
               ) : (
                 <PrimaryButton
                   label={ready ? 'Claim Rewards' : 'In Progress'}
@@ -132,19 +160,26 @@ export const FishScreen: React.FC = () => {
             <Text style={styles.modalTitle}>Trip Rewards</Text>
             <Text style={styles.modalMeta}>{lastRewards?.outcomeLabel}</Text>
             <Text style={styles.modalMeta}>Coins: +{lastRewards?.coins ?? 0}</Text>
+            <Text style={styles.modalMeta}>Fish Currency: +{lastRewards?.fishCurrency ?? 0}</Text>
             <Text style={styles.modalMeta}>XP: +{lastRewards?.xp ?? 0}</Text>
-            <Text style={styles.modalMeta}>Mats: +{lastRewards?.mats ?? 0}</Text>
+            <Text style={styles.modalMeta}>Shells: +{lastRewards?.shells ?? 0}</Text>
             <Text style={styles.modalMeta}>Treasure: {lastRewards?.treasure ? 'Yes' : 'No'}</Text>
-            <Text style={styles.sectionTitle}>Fish</Text>
-            {lastRewards && lastRewards.fish.length > 0 ? (
-              lastRewards.fish.map((fish, index) => (
-                <Text key={`${fish.id}-${index}`} style={styles.modalMeta}>
-                  {fish.name} • {fish.rarity}★
-                </Text>
-              ))
-            ) : (
-              <Text style={styles.modalMeta}>No fish caught.</Text>
-            )}
+            <Text style={styles.sectionTitle}>Fish Caught</Text>
+            <View style={styles.fishGrid}>
+              {lastRewards && lastRewards.fish.length > 0 ? (
+                lastRewards.fish.map((fish) => (
+                  <View
+                    key={fish.id}
+                    style={[styles.fishCard, { borderColor: rarityBorder(fish.rarity) }]}
+                  >
+                    <Text style={styles.fishName}>{fish.name}</Text>
+                    <Text style={styles.fishValue}>+{fish.value} fish</Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.modalMeta}>No fish caught.</Text>
+              )}
+            </View>
             <PrimaryButton label="Close" onPress={() => setRewardModal(false)} />
           </View>
         </View>
@@ -164,8 +199,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: 4,
     color: '#3A2416'
+  },
+  sub: {
+    color: '#7A5A44'
   },
   sectionTitle: {
     marginTop: 12,
@@ -184,6 +222,9 @@ const styles = StyleSheet.create({
   rowText: {
     marginBottom: 6,
     color: '#4A2E1F'
+  },
+  listBox: {
+    maxHeight: 220
   },
   pillRow: {
     flexDirection: 'row',
@@ -221,5 +262,28 @@ const styles = StyleSheet.create({
   modalMeta: {
     color: '#7A5A44',
     marginBottom: 4
+  },
+  fishGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    marginBottom: 12
+  },
+  fishCard: {
+    width: '30%',
+    margin: '1.5%',
+    borderWidth: 2,
+    borderRadius: 12,
+    padding: 6,
+    backgroundColor: '#FFFDF9'
+  },
+  fishName: {
+    fontWeight: '700',
+    fontSize: 12,
+    color: '#3A2416'
+  },
+  fishValue: {
+    color: '#7A5A44',
+    fontSize: 11
   }
 });

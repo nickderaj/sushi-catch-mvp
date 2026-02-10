@@ -20,7 +20,7 @@ export const IntroScreen: React.FC<NativeStackScreenProps<RootStackParamList, 'I
   const handleCrack = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
     playEggCrack().catch(() => undefined);
-    const pulls = hatchEggs(1);
+    const pulls = hatchEggs('1', 1);
     if (pulls.length > 0) {
       setCharacter(pulls[0]);
       setHatched(true);

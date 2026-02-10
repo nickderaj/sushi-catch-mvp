@@ -4,27 +4,27 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { useGame } from '../state/GameContext';
 
 export const DebugScreen: React.FC = () => {
-  const { state, addCurrency, addFish, skipTrips, skipKitchen, resetGame } = useGame();
+  const { state, addResources, skipTrips, resetGame } = useGame();
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Debug Menu</Text>
       <Text style={styles.sub}>
-        Coins: {state.coins} • Pearls: {state.pearls} • Eggs: {state.eggs}
+        Coins: {state.coins} • Shells: {state.shells} • Fish: {state.fishCurrency}
       </Text>
 
-      <PrimaryButton label="+100 Coins" onPress={() => addCurrency(100, 0, 0)} />
-      <PrimaryButton label="+50 Pearls" onPress={() => addCurrency(0, 50, 0)} />
-      <PrimaryButton label="+10 Eggs" onPress={() => addCurrency(0, 0, 10)} />
+      <PrimaryButton label="+100 Coins" onPress={() => addResources(100, 0, {}, 0)} />
+      <PrimaryButton label="+50 Shells" onPress={() => addResources(0, 50, {}, 0)} />
+      <PrimaryButton label="+10 Common Eggs" onPress={() => addResources(0, 0, { '1': 10 }, 0)} />
+      <PrimaryButton label="+2 Rare Eggs" onPress={() => addResources(0, 0, { '3': 2 }, 0)} />
+      <PrimaryButton label="+200 Fish Currency" onPress={() => addResources(0, 0, {}, 200)} />
       <PrimaryButton
-        label="Starter Pack (+500 Coins, +100 Pearls, +20 Eggs)"
-        onPress={() => addCurrency(500, 100, 20)}
+        label="Starter Pack (+500 Coins, +100 Shells, +20 Eggs, +500 Fish)"
+        onPress={() => addResources(500, 100, { '1': 20 }, 500)}
       />
 
       <View style={styles.section}>
-        <PrimaryButton label="Add 5 Random Fish" onPress={() => addFish(5)} />
         <PrimaryButton label="Skip All Trip Timers" onPress={skipTrips} />
-        <PrimaryButton label="Skip Kitchen Shift Timers" onPress={skipKitchen} />
       </View>
 
       <View style={styles.section}>

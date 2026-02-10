@@ -38,7 +38,7 @@ export type Species = {
     dexterity: number;
     speed: number;
     luck: number;
-    expertise: number;
+    stamina: number;
     charisma: number;
   };
   fishingBias: number;
@@ -51,12 +51,12 @@ export const SPECIES: Species[] = [
     name: 'Koi Sprite',
     bio: 'A calm river guardian with steady hands and a taste for precision.',
     baselineStats: {
-      power: 52,
-      dexterity: 55,
-      speed: 50,
-      luck: 48,
-      expertise: 54,
-      charisma: 50
+      power: 0,
+      dexterity: 0,
+      speed: 0,
+      luck: 0,
+      stamina: 0,
+      charisma: 0
     },
     fishingBias: 2,
     kitchenBias: 1
@@ -66,12 +66,12 @@ export const SPECIES: Species[] = [
     name: 'Tanuki Trickster',
     bio: 'A playful shapeshifter who loves risky trips and fast service.',
     baselineStats: {
-      power: 50,
-      dexterity: 52,
-      speed: 56,
-      luck: 54,
-      expertise: 48,
-      charisma: 52
+      power: 0,
+      dexterity: 0,
+      speed: 0,
+      luck: 0,
+      stamina: 0,
+      charisma: 0
     },
     fishingBias: 2,
     kitchenBias: 0
@@ -81,12 +81,12 @@ export const SPECIES: Species[] = [
     name: 'Axolotl Diver',
     bio: 'A deep-water explorer that specializes in rare finds.',
     baselineStats: {
-      power: 54,
-      dexterity: 58,
-      speed: 46,
-      luck: 55,
-      expertise: 50,
-      charisma: 45
+      power: 0,
+      dexterity: 0,
+      speed: 0,
+      luck: 0,
+      stamina: 0,
+      charisma: 0
     },
     fishingBias: 3,
     kitchenBias: 0
@@ -96,12 +96,12 @@ export const SPECIES: Species[] = [
     name: 'Crane Chef',
     bio: 'Elegant and focused, elevates sushi quality with delicate technique.',
     baselineStats: {
-      power: 46,
-      dexterity: 50,
-      speed: 48,
-      luck: 50,
-      expertise: 60,
-      charisma: 55
+      power: 0,
+      dexterity: 0,
+      speed: 0,
+      luck: 0,
+      stamina: 0,
+      charisma: 0
     },
     fishingBias: 0,
     kitchenBias: 3
@@ -111,12 +111,12 @@ export const SPECIES: Species[] = [
     name: 'Harbor Seal',
     bio: 'Friendly and efficient, keeps the shop running smoothly.',
     baselineStats: {
-      power: 48,
-      dexterity: 46,
-      speed: 50,
-      luck: 52,
-      expertise: 55,
-      charisma: 60
+      power: 0,
+      dexterity: 0,
+      speed: 0,
+      luck: 0,
+      stamina: 0,
+      charisma: 0
     },
     fishingBias: 0,
     kitchenBias: 3
@@ -126,12 +126,12 @@ export const SPECIES: Species[] = [
     name: 'Catfish Captain',
     bio: 'A tough leader who excels at hauling big catches.',
     baselineStats: {
-      power: 60,
-      dexterity: 48,
-      speed: 44,
-      luck: 46,
-      expertise: 48,
-      charisma: 45
+      power: 0,
+      dexterity: 0,
+      speed: 0,
+      luck: 0,
+      stamina: 0,
+      charisma: 0
     },
     fishingBias: 3,
     kitchenBias: 0
@@ -141,12 +141,12 @@ export const SPECIES: Species[] = [
     name: 'Ink Squid',
     bio: 'Quick hands and sly tactics; great in both river and kitchen.',
     baselineStats: {
-      power: 50,
-      dexterity: 56,
-      speed: 54,
-      luck: 50,
-      expertise: 52,
-      charisma: 50
+      power: 0,
+      dexterity: 0,
+      speed: 0,
+      luck: 0,
+      stamina: 0,
+      charisma: 0
     },
     fishingBias: 2,
     kitchenBias: 1
@@ -156,46 +156,25 @@ export const SPECIES: Species[] = [
     name: 'Sea Turtle',
     bio: 'Slow but dependable, adds stability to any crew.',
     baselineStats: {
-      power: 52,
-      dexterity: 44,
-      speed: 40,
-      luck: 58,
-      expertise: 54,
-      charisma: 48
+      power: 0,
+      dexterity: 0,
+      speed: 0,
+      luck: 0,
+      stamina: 0,
+      charisma: 0
     },
     fishingBias: 1,
     kitchenBias: 1
   }
 ];
 
-export const MAX_LEVEL = 20;
-
-/** Cumulative XP needed to reach each level. Index = level. */
-export const XP_THRESHOLDS: number[] = Array.from({ length: MAX_LEVEL + 1 }, (_, i) => {
-  if (i <= 1) return 0;
-  return 10 * i * (i - 1);
-});
-
-/** Deterministic stat gains per level-up, keyed by species. */
-export type StatGrowth = {
-  power: number;
-  dexterity: number;
-  speed: number;
-  luck: number;
-  expertise: number;
-  charisma: number;
-};
-
-export const SPECIES_GROWTH: Record<SpeciesId, StatGrowth> = {
-  koi: { power: 1, dexterity: 2, speed: 1, luck: 1, expertise: 2, charisma: 1 },
-  tanuki: { power: 1, dexterity: 1, speed: 2, luck: 2, expertise: 1, charisma: 1 },
-  axolotl: { power: 2, dexterity: 2, speed: 1, luck: 2, expertise: 1, charisma: 0 },
-  crane: { power: 0, dexterity: 1, speed: 1, luck: 1, expertise: 3, charisma: 2 },
-  seal: { power: 1, dexterity: 0, speed: 1, luck: 1, expertise: 2, charisma: 3 },
-  catfish: { power: 3, dexterity: 1, speed: 1, luck: 1, expertise: 1, charisma: 1 },
-  squid: { power: 1, dexterity: 2, speed: 2, luck: 1, expertise: 1, charisma: 1 },
-  turtle: { power: 1, dexterity: 1, speed: 0, luck: 2, expertise: 2, charisma: 2 }
-};
+export const EGG_TYPES: Array<{ rarity: Rarity; label: string; shellCost: number }> = [
+  { rarity: '1', label: 'Common Egg', shellCost: 10 },
+  { rarity: '2', label: 'Uncommon Egg', shellCost: 25 },
+  { rarity: '3', label: 'Rare Egg', shellCost: 60 },
+  { rarity: '4', label: 'Epic Egg', shellCost: 120 },
+  { rarity: '5', label: 'Legendary Egg', shellCost: 250 }
+];
 
 export const LOCATIONS = [
   { id: 'shallow_bay', name: 'Shallow Bay' },
@@ -208,12 +187,6 @@ export const DURATIONS = [
   { id: 'short', label: '10s', seconds: 10 },
   { id: 'medium', label: '30s', seconds: 30 },
   { id: 'long', label: '60s', seconds: 60 }
-] as const;
-
-export const KITCHEN_SHIFTS = [
-  { id: 'short', label: '2h', seconds: 2 * 60 * 60 },
-  { id: 'medium', label: '4h', seconds: 4 * 60 * 60 },
-  { id: 'long', label: '8h', seconds: 8 * 60 * 60 }
 ] as const;
 
 export const CHARACTER_NAMES = [
